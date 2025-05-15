@@ -8,17 +8,18 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Eye, EyeOff, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 
 export default function SignUpPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
+    setError(null);
 
     const formData = new FormData(e.currentTarget);
     const email = formData.get("email") as string;
@@ -26,16 +27,51 @@ export default function SignUpPage() {
     const name = formData.get("name") as string;
 
     try {
+      // First, check if user already exists using server-side action
+      // We'll create a simple API route to handle this check
+      const checkUserResponse = await fetch('/api/check-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+      
+      const checkUserData = await checkUserResponse.json();
+      
+      if (checkUserData.exists) {
+        throw new Error("user_exists");
+      }
+      
+      // If user doesn't exist, proceed with signup
       await authClient.signUp.email({
         email,
         password,
         name,
       });
-
+      
+      // Success case
+      toast.success("Account created successfully! Please sign in.");
       router.push("/signin");
     } catch (err) {
       console.error("Signup Error:", err);
-      setError("Failed to create account. Please try again.");
+      
+      // Handle specific error types
+      let errorMessage = "Failed to create account. Please try again.";
+      
+      if (err instanceof Error) {
+        if (err.message === "user_exists" || err.message.includes("exists")) {
+          errorMessage = "This email is already registered. Please sign in instead.";
+        } else if (err.message.includes("password")) {
+          errorMessage = "Password doesn't meet requirements. Please try a stronger password.";
+        }
+      }
+      
+      // Set the error state for the alert
+      setError(errorMessage);
+      
+      // Also show as a toast notification
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -132,12 +168,14 @@ export default function SignUpPage() {
                     type={showPassword ? "text" : "password"}
                     placeholder="Create a strong password"
                     required
+                    minLength={8}
                     className="w-full h-12 px-4 pr-12 text-base rounded-lg border-gray-200 focus:border-purple-400 focus:ring-1 focus:ring-purple-400 transition-all"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-500 hover:text-gray-700 transition-colors"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? (
                       <EyeOff className="h-5 w-5" />
@@ -157,9 +195,6 @@ export default function SignUpPage() {
                 className="w-full h-12 text-base font-semibold text-white transition-all duration-200 rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
                 style={{ 
                   backgroundColor: '#1E1433',
-                  ...(loading ? {} : {
-                    '&:hover': { backgroundColor: '#432C5F' }
-                  })
                 }}
               >
                 {loading ? (
@@ -178,10 +213,7 @@ export default function SignUpPage() {
                 Already have an account?{" "}
                 <a 
                   href="/signin" 
-                  className="font-semibold transition-colors duration-200" 
-                  style={{ color: '#9D8CB4' }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = '#432C5F'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = '#9D8CB4'}
+                  className="font-semibold text-purple-700 hover:text-purple-900 transition-colors duration-200" 
                 >
                   Sign in instead
                 </a>
