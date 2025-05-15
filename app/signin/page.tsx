@@ -4,6 +4,13 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { authClient } from "@/lib/auth-client"
 
+type User = {
+  id: string
+  name: string
+  email: string
+  role?: string
+}
+
 export default function SignInPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -24,8 +31,16 @@ export default function SignInPage() {
         password,
       })
       
-      // Redirect to dashboard after successful signin
-      router.push("/home")
+      // Get the user data including role
+      const session = await authClient.getSession()
+      const user = session.data?.user as User | undefined
+      
+      // Redirect based on role
+      if (user?.role === "admin") {
+        router.push("/admin")
+      } else {
+        router.push("/home")
+      }
     } catch (err) {
       console.error("Signin error",err)
       setError("Invalid email or password. Please try again.")
