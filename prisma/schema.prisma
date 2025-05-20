@@ -22,6 +22,7 @@ model User {
   role          String?
   accounts      Account[]
   sessions      Session[]
+  invitations   Invitation[]
 
   @@map("user")
 }
@@ -69,4 +70,17 @@ model Verification {
   updatedAt  DateTime?
 
   @@map("verification")
+}
+
+model Invitation {
+  id         String    @id @default(cuid())
+  email      String    @unique
+  token      String    @unique
+  expires    DateTime
+  createdAt  DateTime  @default(now())
+  status     String    @default("pending") // pending, accepted, expired
+  invitedBy  String
+  admin      User      @relation(fields: [invitedBy], references: [id], onDelete: Cascade)
+
+  @@map("invitation")
 }

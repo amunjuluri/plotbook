@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,9 +12,47 @@ import { toast } from "sonner";
 
 export default function SignUpPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [invitationChecked, setInvitationChecked] = useState(false);
+  const [invitationEmail, setInvitationEmail] = useState<string | null>(null);
+  const [validatingToken, setValidatingToken] = useState(true);
+
+  // Get token from URL
+  const token = searchParams.get('token');
+
+  // Validate invitation token on page load
+  useEffect(() => {
+    if (!token) {
+      setValidatingToken(false);
+      setError("An invitation token is required to sign up.");
+      return;
+    }
+
+    const validateToken = async () => {
+      try {
+        const response = await fetch(`/api/invitations/validate?token=${token}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Invalid or expired invitation");
+        }
+
+        // Set the email from the invitation
+        setInvitationEmail(data.email);
+        setInvitationChecked(true);
+      } catch (err) {
+        console.error("Token validation error:", err);
+        setError("Invalid or expired invitation link");
+      } finally {
+        setValidatingToken(false);
+      }
+    };
+
+    validateToken();
+  }, [token]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -26,9 +64,15 @@ export default function SignUpPage() {
     const password = formData.get("password") as string;
     const name = formData.get("name") as string;
 
+    // Check if the email matches the invitation email
+    if (invitationEmail && email !== invitationEmail) {
+      setError("Email must match the invitation email");
+      setLoading(false);
+      return;
+    }
+
     try {
       // First, check if user already exists using server-side action
-      // We'll create a simple API route to handle this check
       const checkUserResponse = await fetch('/api/check-user', {
         method: 'POST',
         headers: {
@@ -49,6 +93,17 @@ export default function SignUpPage() {
         password,
         name,
       });
+
+      // Mark the invitation as accepted
+      if (token) {
+        await fetch('/api/invitations/accept', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ token }),
+        });
+      }
       
       // Success case
       toast.success("Account created successfully! Please sign in.");
@@ -77,6 +132,40 @@ export default function SignUpPage() {
     }
   };
 
+  // If we're still validating the token or there's no valid invitation, show a loading/error state
+  if (validatingToken) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F7F7F7' }}>
+        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-purple-600" />
+          <h2 className="text-xl font-semibold">Validating invitation...</h2>
+          <p className="text-gray-600 mt-2">Please wait while we validate your invitation.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If token validation failed, show error
+  if (!invitationChecked && token) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F7F7F7' }}>
+        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+          <AlertCircle className="h-8 w-8 mx-auto mb-4 text-red-600" />
+          <h2 className="text-xl font-semibold">Invalid Invitation</h2>
+          <p className="text-gray-600 mt-2">{error || "Your invitation link is invalid or has expired."}</p>
+          <Button 
+            className="mt-6"
+            style={{ backgroundColor: '#1E1433' }}
+            onClick={() => router.push('/')}
+          >
+            Go to Homepage
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Standard signup form shown only for valid invitations
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: '#F7F7F7' }}>
       {/* Left side - Simplified branding */}
@@ -116,7 +205,7 @@ export default function SignUpPage() {
               Create your account
             </h2>
             <p className="text-gray-600">
-              Start your journey with PlotBook today
+              Complete your registration to join PlotBook
             </p>
           </div>
 
@@ -153,8 +242,16 @@ export default function SignUpPage() {
                   type="email"
                   placeholder="Enter your email"
                   required
+                  value={invitationEmail || ""}
+                  onChange={(e) => invitationEmail && setInvitationEmail(e.target.value)}
+                  readOnly={!!invitationEmail}
                   className="w-full h-12 px-4 text-base rounded-lg border-gray-200 focus:border-purple-400 focus:ring-1 focus:ring-purple-400 transition-all"
                 />
+                {invitationEmail && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    This email is associated with your invitation and cannot be changed
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">

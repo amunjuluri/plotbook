@@ -29,6 +29,7 @@ export default function Home() {
         router.push("/signin")
         return
       }
+      console.log(session.data.user)
       setUser(session.data.user)
     } catch (error) {
       console.error("Not Authorized",error)
