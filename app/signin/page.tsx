@@ -33,13 +33,16 @@ export default function SignInPage() {
       
       // Get the user data including role
       const session = await authClient.getSession()
-      const user = session.data?.user as User | undefined
+      // const user = 
+      if(session.data?.user as User | undefined){
       
       // Redirect based on role
-      if (user?.role === "admin") {
-        router.push("/admin")
-      } else {
-        router.push("/home")
+      // if (user?.role === "admin") {
+      //   router.push("/admin")
+      // } else {
+      //   router.push("/home")
+      // }
+      router.push("/dashboard")
       }
     } catch (err) {
       console.error("Signin error",err)

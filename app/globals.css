@@ -5,5 +5,10 @@
 /* Cal Sans utility classes */
 .font-cal-sans {
   font-family: var(--font-cal-sans), system-ui, -apple-system, sans-serif;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  letter-spacing: 0.01em;
+  color: rgba(0, 0, 0, 0.85); /* Slightly softer than pure black */
 }
 /* important  */

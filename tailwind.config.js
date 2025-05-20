@@ -8,6 +8,7 @@ export default createTheme({
   extend: {
     fontFamily: {
       'cal-sans': ['var(--font-cal-sans)', 'system-ui', '-apple-system', 'sans-serif'],
+      'montserrat': ['var(--font-montserrat)', 'system-ui', '-apple-system', 'sans-serif'],
     },
     colors: {
       border: "hsl(var(--border))",
