@@ -11,10 +11,26 @@ import { MapPin, Building, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { MapSearch } from "@/components/MapSearch";
 
+interface PropertyData {
+  address: string;
+  latitude: number;
+  longitude: number;
+  type: string;
+  zoning: string;
+  parcelId: string;
+  owner: string;
+  lastSale: {
+    date: string;
+    amount: string;
+  };
+  area: string;
+  yearBuilt: string;
+}
+
 export default function PropertyPage() {
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
-  const [propertyData, setPropertyData] = useState<any>(null);
+  const [propertyData, setPropertyData] = useState<PropertyData | null>(null);
   
   // Get lat/lng from URL query parameters
   const lat = searchParams.get('lat');
@@ -142,17 +158,6 @@ export default function PropertyPage() {
     );
   }
 
-  // Update the mapRef to display the property
-  const onMapInit = (map: any) => {
-    if (propertyData && map) {
-      // Map is ready and we have property data
-      map.flyTo({
-        center: [propertyData.longitude, propertyData.latitude],
-        zoom: 15
-      });
-    }
-  };
-
   return (
     <DashboardLayout>
       <div className="flex items-center mb-6">
@@ -171,7 +176,7 @@ export default function PropertyPage() {
         <Card>
           <CardHeader>
             <CardTitle className="font-cal-sans font-normal">Location</CardTitle>
-            <CardDescription>{propertyData.address}</CardDescription>
+            <CardDescription>{propertyData?.address}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
@@ -186,7 +191,7 @@ export default function PropertyPage() {
             <div className="flex items-center gap-2 mt-4">
               <MapPin className="h-4 w-4 text-muted-foreground" />
               <span>
-                Coordinates: {propertyData.latitude.toFixed(6)}, {propertyData.longitude.toFixed(6)}
+                Coordinates: {propertyData?.latitude.toFixed(6)}, {propertyData?.longitude.toFixed(6)}
               </span>
             </div>
           </CardContent>
@@ -205,35 +210,35 @@ export default function PropertyPage() {
                   <dd className="font-medium">
                     <Badge variant="secondary" className="mt-1">
                       <Building className="h-3 w-3 mr-1" />
-                      {propertyData.type}
+                      {propertyData?.type}
                     </Badge>
                   </dd>
                 </div>
                 <div>
                   <dt className="text-sm text-muted-foreground">Zoning</dt>
-                  <dd className="font-medium">{propertyData.zoning}</dd>
+                  <dd className="font-medium">{propertyData?.zoning}</dd>
                 </div>
                 <div>
                   <dt className="text-sm text-muted-foreground">Parcel ID</dt>
-                  <dd className="font-medium">{propertyData.parcelId}</dd>
+                  <dd className="font-medium">{propertyData?.parcelId}</dd>
                 </div>
                 <div>
                   <dt className="text-sm text-muted-foreground">Owner</dt>
-                  <dd className="font-medium">{propertyData.owner}</dd>
+                  <dd className="font-medium">{propertyData?.owner}</dd>
                 </div>
                 <div>
                   <dt className="text-sm text-muted-foreground">Last Sale</dt>
                   <dd className="font-medium">
-                    {propertyData.lastSale.date} ({propertyData.lastSale.amount})
+                    {propertyData?.lastSale.date} ({propertyData?.lastSale.amount})
                   </dd>
                 </div>
                 <div>
                   <dt className="text-sm text-muted-foreground">Area</dt>
-                  <dd className="font-medium">{propertyData.area}</dd>
+                  <dd className="font-medium">{propertyData?.area}</dd>
                 </div>
                 <div>
                   <dt className="text-sm text-muted-foreground">Year Built</dt>
-                  <dd className="font-medium">{propertyData.yearBuilt}</dd>
+                  <dd className="font-medium">{propertyData?.yearBuilt}</dd>
                 </div>
               </dl>
             </CardContent>
