@@ -4,21 +4,22 @@ import React, { ReactNode, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
   Bookmark,
   Download,
   Users,
   Settings,
-  BookOpen,
   LogOut,
   Menu,
-  X,
-  Home
+  X
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface DashboardLayoutProps {
   children: ReactNode;
+  fullHeight?: boolean;
 }
 
 interface NavItem {
@@ -28,7 +29,7 @@ interface NavItem {
   active?: boolean;
 }
 
-export function DashboardLayout({ children }: DashboardLayoutProps) {
+export function DashboardLayout({ children, fullHeight = false }: DashboardLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -42,128 +43,194 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     }
   };
 
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
-  };
-
   const navItems: NavItem[] = [
     {
-      name: "Dashboard",
-      href: "/dashboard",
-      icon: <Home className="h-5 w-5" />,
-      active: pathname === "/dashboard"
-    },
-    {
       name: "Search",
-      href: "/dashboard/search",
-      icon: <Search className="h-5 w-5" />,
-      active: pathname === "/dashboard/search"
+      href: "/dashboard",
+      icon: <Search className="h-4 w-4" />,
+      active: pathname === "/dashboard"
     },
     {
       name: "Saved",
       href: "/dashboard/saved",
-      icon: <Bookmark className="h-5 w-5" />,
+      icon: <Bookmark className="h-4 w-4" />,
       active: pathname === "/dashboard/saved"
     },
     {
       name: "Exports",
       href: "/dashboard/exports",
-      icon: <Download className="h-5 w-5" />,
+      icon: <Download className="h-4 w-4" />,
       active: pathname === "/dashboard/exports"
     },
     {
-      name: "My Team",
+      name: "Team",
       href: "/dashboard/team",
-      icon: <Users className="h-5 w-5" />,
+      icon: <Users className="h-4 w-4" />,
       active: pathname === "/dashboard/team"
     },
     {
-      name: "Profile Settings",
+      name: "Settings",
       href: "/dashboard/settings",
-      icon: <Settings className="h-5 w-5" />,
+      icon: <Settings className="h-4 w-4" />,
       active: pathname === "/dashboard/settings"
-    },
-    {
-      name: "Usage Guide",
-      href: "/dashboard/guide",
-      icon: <BookOpen className="h-5 w-5" />,
-      active: pathname === "/dashboard/guide"
     }
   ];
 
-  return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Mobile menu button */}
-      <div className="fixed top-0 left-0 z-20 md:hidden p-4">
-        <button
-          onClick={toggleMobileMenu}
-          className="p-2 rounded-md text-gray-700 hover:bg-gray-100"
-        >
-          {isMobileMenuOpen ? (
-            <X className="h-6 w-6" />
-          ) : (
-            <Menu className="h-6 w-6" />
-          )}
-        </button>
+  const SidebarContent = () => (
+    <div className="h-full flex flex-col">
+      {/* Logo */}
+      <div className="px-4 py-4 flex items-center border-b border-gray-200/30">
+        <h1 className="text-lg font-bold">
+          <span className="text-[#D2966E]">Plot</span>
+          <span className="text-[#1E1433]">Book</span>
+        </h1>
       </div>
 
-      {/* Sidebar */}
-      <div
-        className={`fixed inset-y-0 left-0 z-10 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${
-          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-        } md:translate-x-0`}
-      >
-        <div className="h-full flex flex-col">
-          {/* Logo */}
-          <div className="px-6 py-6 flex items-center">
-            <h1 className="text-2xl font-bold">
-              <span className="text-[#D2966E]">Plot</span>
-              <span className="text-[#1E1433]">Book</span>
-            </h1>
-          </div>
+      {/* Nav Items */}
+      <nav className="flex-1 px-2 mt-3 space-y-1">
+        {navItems.map((item) => (
+          <Link
+            key={item.name}
+            href={item.href}
+            className={`flex items-center px-3 py-2 rounded-lg transition-all duration-200 ${
+              item.active
+                ? "bg-gradient-to-r from-[#1E1433] to-[#2A1B4B] text-white shadow-md"
+                : "text-gray-700 hover:bg-white/60 hover:shadow-sm"
+            }`}
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <span className={`mr-2 ${item.active ? "text-white" : "text-[#1E1433]"}`}>
+              {item.icon}
+            </span>
+            <span className="font-medium text-sm">{item.name}</span>
+          </Link>
+        ))}
+      </nav>
 
-          {/* Nav Items */}
-          <nav className="flex-1 px-4 mt-4 space-y-1">
-            {navItems.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`flex items-center px-4 py-3 rounded-lg ${
-                  item.active
-                    ? "bg-[#1E1433] text-white"
-                    : "text-gray-700 hover:bg-gray-100"
-                } transition-colors`}
-                onClick={() => {
-                  if (isMobileMenuOpen) setIsMobileMenuOpen(false);
-                }}
-              >
-                <span className={`mr-3 ${item.active ? "text-white" : "text-[#1E1433]"}`}>
-                  {item.icon}
-                </span>
-                <span className="font-medium">{item.name}</span>
-              </Link>
-            ))}
-          </nav>
+      {/* Logout Button */}
+      <div className="px-2 py-3 border-t border-gray-200/30">
+        <Button
+          onClick={handleLogout}
+          variant="ghost"
+          className="w-full justify-start text-gray-700 hover:bg-red-50 hover:text-red-600 h-9 px-3"
+        >
+          <LogOut className="h-4 w-4 mr-2" />
+          <span className="font-medium text-sm">Logout</span>
+        </Button>
+      </div>
+    </div>
+  );
 
-          {/* Logout Button */}
-          <div className="px-4 py-6">
-            <button
-              onClick={handleLogout}
-              className="flex w-full items-center px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+  return (
+    <div className="flex h-screen bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+      {/* Mobile Navigation Overlay */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="lg:hidden fixed inset-0 bg-black/50 z-[70]"
+              onClick={() => setIsMobileMenuOpen(false)}
+            />
+            
+            {/* Mobile Sidebar */}
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="lg:hidden fixed left-0 top-0 bottom-0 w-64 bg-white/95 backdrop-blur-xl shadow-2xl z-[80]"
             >
-              <LogOut className="h-5 w-5 mr-3 text-[#1E1433]" />
-              <span className="font-medium">Logout</span>
-            </button>
-          </div>
-        </div>
+              {/* Mobile Header */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-200/30">
+                <h1 className="text-lg font-bold">
+                  <span className="text-[#D2966E]">Plot</span>
+                  <span className="text-[#1E1433]">Book</span>
+                </h1>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="rounded-full p-2"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              {/* Mobile Nav Content */}
+              <div className="flex-1 flex flex-col">
+                <nav className="flex-1 px-2 mt-3 space-y-1">
+                  {navItems.map((item) => (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={`flex items-center px-3 py-3 rounded-lg transition-all duration-200 ${
+                        item.active
+                          ? "bg-gradient-to-r from-[#1E1433] to-[#2A1B4B] text-white shadow-md"
+                          : "text-gray-700 hover:bg-white/60 hover:shadow-sm"
+                      }`}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <span className={`mr-3 ${item.active ? "text-white" : "text-[#1E1433]"}`}>
+                        {item.icon}
+                      </span>
+                      <span className="font-medium">{item.name}</span>
+                    </Link>
+                  ))}
+                </nav>
+
+                {/* Mobile Logout Button */}
+                <div className="px-2 py-3 border-t border-gray-200/30">
+                  <Button
+                    onClick={() => {
+                      handleLogout();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    variant="ghost"
+                    className="w-full justify-start text-gray-700 hover:bg-red-50 hover:text-red-600 h-11 px-3"
+                  >
+                    <LogOut className="h-4 w-4 mr-3" />
+                    <span className="font-medium">Logout</span>
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:flex w-48 bg-white/95 backdrop-blur-xl shadow-xl border-r border-gray-200/30">
+        <SidebarContent />
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 ml-0 md:ml-64 transition-margin duration-300">
-        <main className="p-4 md:p-8 max-w-7xl mx-auto">
-          {children}
-        </main>
+      <div className="flex-1 lg:ml-0 overflow-hidden">
+        {fullHeight ? (
+          <main className="h-full w-full">
+            {children}
+          </main>
+        ) : (
+          <main className="h-full overflow-y-auto">
+            <div className="p-3 sm:p-4 lg:p-6 max-w-7xl mx-auto">
+              {children}
+            </div>
+          </main>
+        )}
       </div>
+
+      {/* Mobile Menu Toggle */}
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={() => setIsMobileMenuOpen(true)}
+        className="lg:hidden fixed top-4 left-4 z-[60] bg-white/95 backdrop-blur-sm border-gray-200/50 shadow-lg"
+      >
+        <Menu className="h-4 w-4" />
+      </Button>
     </div>
   );
 } 
