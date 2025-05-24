@@ -159,8 +159,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 ml-0 md:ml-64 transition-margin duration-300">
-        <main className="p-4 md:p-8 max-w-7xl mx-auto">
+      <div className="flex-1 ml-0 md:ml-64 transition-margin duration-300 h-full">
+        <main className="p-4 md:p-8 h-full">
           {children}
         </main>
       </div>

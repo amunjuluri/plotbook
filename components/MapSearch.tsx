@@ -5,8 +5,7 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Search } from "lucide-react";
+import { Search, SearchIcon } from "lucide-react";
 
 // CSS styles for map
 const mapContainerStyle = {
@@ -57,7 +56,7 @@ export function MapSearch({ onLocationSelect, initialLocation }: MapSearchProps)
       const mapInstance = new mapboxgl.Map({
         container: mapContainer.current,
         // Using the new Mapbox Standard style (default if not specified)
-        // style: 'mapbox://styles/mapbox/standard', 
+        style: 'mapbox://styles/mapbox/standard-satellite', 
         center: initialCenter as [number, number],
         zoom: initialLocation ? 15 : 12,
         projection: 'globe', // Using the globe projection for a more modern look
@@ -159,7 +158,7 @@ export function MapSearch({ onLocationSelect, initialLocation }: MapSearchProps)
     
     try {
       // Use Mapbox Geocoding API
-      const searchUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(searchQuery)}.json?access_token=${mapboxgl.accessToken}&limit=1`;
+      const searchUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(searchQuery)}.json?access_token=${mapboxgl.accessToken}&limit=4`;
       
       const response = await fetch(searchUrl);
       
@@ -206,43 +205,50 @@ export function MapSearch({ onLocationSelect, initialLocation }: MapSearchProps)
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex gap-2 mb-4">
-        <Input
-          placeholder="Search for an address or location"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="flex-1"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              handleSearch();
-            }
-          }}
-        />
-        <Button onClick={handleSearch}>
-          <Search className="h-4 w-4 mr-2" />
-          Search
+    <div className="relative w-full h-full">
+      {/* Search box positioned on top of map */}
+      <div className="absolute top-4 left-4 right-4 z-10 flex gap-3">
+        <div className="relative w-80">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search for an address or location"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 bg-white/95 backdrop-blur-sm border-gray-200 shadow-lg focus:border-[#D2966E] focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#D2966E] transition-colors"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleSearch();
+              }
+            }}
+          />
+        </div>
+        <Button 
+          onClick={handleSearch} 
+          size="icon"
+          className="bg-[#D2966E] hover:bg-[#D2966E]/90 text-white shadow-lg focus:outline-none"
+        >
+          <SearchIcon className="h-4 w-4"/>
         </Button>
       </div>
       
-      <Card className="flex-1 relative min-h-[500px]">
-        {mapError ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-            <p className="text-red-500">{mapError}</p>
-          </div>
-        ) : (
-          <div 
-            ref={mapContainer}
-            style={mapContainerStyle}
-            className="rounded-md overflow-hidden"
-          />
-        )}
-      </Card>
+      {/* Map container taking full space */}
+      {mapError ? (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+          <p className="text-red-500">{mapError}</p>
+        </div>
+      ) : (
+        <div 
+          ref={mapContainer}
+          style={mapContainerStyle}
+          className="w-full h-full"
+        />
+      )}
       
+      {/* Selected location info positioned at bottom */}
       {selectedLocation && (
-        <div className="mt-4 text-sm">
-          <p className="font-medium">Selected Location:</p>
-          <p className="text-muted-foreground">{selectedLocation.address || `${selectedLocation.latitude}, ${selectedLocation.longitude}`}</p>
+        <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm p-3 rounded-lg shadow-lg max-w-sm z-10 border border-gray-200">
+          <p className="font-medium text-sm">Selected Location:</p>
+          <p className="text-muted-foreground text-xs">{selectedLocation.address || `${selectedLocation.latitude}, ${selectedLocation.longitude}`}</p>
         </div>
       )}
     </div>
