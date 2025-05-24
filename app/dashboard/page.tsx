@@ -7,16 +7,8 @@ import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MapSearch, PropertyLocation } from "@/components/MapSearch";
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role?: string;
-}
-
 export default function DashboardPage() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -27,7 +19,7 @@ export default function DashboardPage() {
           router.push("/signin");
           return;
         }
-        setUser(session.data.user as User);
+        // User is authenticated, no need to store user data
       } catch (error) {
         console.error("Auth error:", error);
         router.push("/signin");
@@ -66,15 +58,7 @@ export default function DashboardPage() {
   return (
     <DashboardLayout>
       <div className="w-full h-full flex flex-col bg-white">
-        {/* Minimal Welcome Section */}
-        <div className="px-6 py-4 border-b border-gray-100 flex-shrink-0">
-          <h1 className="text-lg font-medium text-gray-900">Welcome back, {user?.name}</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Search for properties on the map
-          </p>
-        </div>
-
-        {/* Map Search Section - takes remaining space */}
+        {/* Map Search Section - takes full space */}
         <div className="flex-1 w-full h-full overflow-hidden">
           <MapSearch onLocationSelect={handleLocationSelect} />
         </div>
