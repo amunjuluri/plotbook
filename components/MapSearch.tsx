@@ -5,7 +5,7 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, SearchIcon } from "lucide-react";
+import { Search, SearchIcon, Satellite, Map } from "lucide-react";
 
 // CSS styles for map
 const mapContainerStyle = {
@@ -39,6 +39,7 @@ export function MapSearch({ onLocationSelect, initialLocation }: MapSearchProps)
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLocation, setSelectedLocation] = useState<PropertyLocation | null>(initialLocation || null);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [isSatellite, setIsSatellite] = useState(true);
 
   // Initialize map when component mounts
   useEffect(() => {
@@ -55,8 +56,7 @@ export function MapSearch({ onLocationSelect, initialLocation }: MapSearchProps)
       // Initialize the map with Mapbox Standard style
       const mapInstance = new mapboxgl.Map({
         container: mapContainer.current,
-        // Using the new Mapbox Standard style (default if not specified)
-        style: 'mapbox://styles/mapbox/standard-satellite', 
+        style: isSatellite ? 'mapbox://styles/mapbox/standard-satellite' : 'mapbox://styles/mapbox/standard',
         center: initialCenter as [number, number],
         zoom: initialLocation ? 15 : 12,
         projection: 'globe', // Using the globe projection for a more modern look
@@ -204,6 +204,34 @@ export function MapSearch({ onLocationSelect, initialLocation }: MapSearchProps)
     }
   };
 
+  const toggleMapStyle = () => {
+    if (!map.current) return;
+    
+    // Store current map center and zoom to preserve view
+    const currentCenter = map.current.getCenter();
+    const currentZoom = map.current.getZoom();
+    
+    const newStyle = isSatellite ? 'mapbox://styles/mapbox/standard' : 'mapbox://styles/mapbox/standard-satellite';
+    setIsSatellite(!isSatellite);
+    
+    // Change map style
+    map.current.setStyle(newStyle);
+    
+    // Restore view and re-add marker after style loads
+    map.current.once('style.load', () => {
+      // Restore the previous center and zoom
+      map.current?.jumpTo({
+        center: currentCenter,
+        zoom: currentZoom
+      });
+      
+      // Re-add marker if there's a selected location
+      if (selectedLocation) {
+        addMarker(selectedLocation.longitude, selectedLocation.latitude);
+      }
+    });
+  };
+
   return (
     <div className="relative w-full h-full">
       {/* Search box positioned on top of map */}
@@ -228,6 +256,19 @@ export function MapSearch({ onLocationSelect, initialLocation }: MapSearchProps)
           className="bg-[#D2966E] hover:bg-[#D2966E]/90 text-white shadow-lg focus:outline-none"
         >
           <SearchIcon className="h-4 w-4"/>
+        </Button>
+      </div>
+
+      {/* Map style toggle button positioned on bottom-right */}
+      <div className="absolute bottom-4 right-4 z-10">
+        <Button
+          onClick={toggleMapStyle}
+          variant="outline"
+          size="icon"
+          className="bg-white/95 backdrop-blur-sm border-gray-200 shadow-lg hover:bg-gray-50 focus:outline-none"
+          title={isSatellite ? "Switch to Standard View" : "Switch to Satellite View"}
+        >
+          {isSatellite ? <Map className="h-4 w-4" /> : <Satellite className="h-4 w-4" />}
         </Button>
       </div>
       
