@@ -5,7 +5,7 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, SearchIcon, Satellite, Map } from "lucide-react";
+import { SearchIcon, Satellite, Map } from "lucide-react";
 
 // CSS styles for map
 const mapContainerStyle = {
@@ -252,28 +252,27 @@ export function MapSearch({ onLocationSelect, initialLocation }: MapSearchProps)
   return (
     <div className="relative w-full h-full">
       {/* Search box positioned on top of map */}
-      <div className="absolute top-4 left-4 right-4 z-10 flex gap-3">
+      <div className="absolute top-4 left-4 right-4 z-10">
         <div className="relative w-80">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search for an address or location"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 bg-white/95 backdrop-blur-sm border-gray-200 shadow-lg focus:border-[#D2966E] focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#D2966E] transition-colors"
+            className="pr-10 bg-white/95 backdrop-blur-sm border-gray-200 shadow-lg focus:border-[#D2966E] focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#D2966E] transition-colors"
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 handleSearch();
               }
             }}
           />
+          <button
+            onClick={handleSearch}
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-[#D2966E] transition-colors"
+            type="button"
+          >
+            <SearchIcon className="h-4 w-4"/>
+          </button>
         </div>
-        <Button 
-          onClick={handleSearch} 
-          size="icon"
-          className="bg-[#D2966E] hover:bg-[#D2966E]/90 text-white shadow-lg focus:outline-none"
-        >
-          <SearchIcon className="h-4 w-4"/>
-        </Button>
       </div>
 
       {/* Map style toggle button positioned on bottom-right */}
