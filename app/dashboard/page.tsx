@@ -65,17 +65,17 @@ export default function DashboardPage() {
 
   return (
     <DashboardLayout>
-      <div className="h-full flex flex-col">
-        {/* Welcome Section */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-medium tracking-tight font-cal-sans">Welcome back, {user?.name}</h1>
-          <p className="text-muted-foreground mt-1">
-            Search for properties using the map below.
+      <div className="w-full h-full flex flex-col bg-white">
+        {/* Minimal Welcome Section */}
+        <div className="px-6 py-4 border-b border-gray-100 flex-shrink-0">
+          <h1 className="text-lg font-medium text-gray-900">Welcome back, {user?.name}</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Search for properties on the map
           </p>
         </div>
 
         {/* Map Search Section - takes remaining space */}
-        <div className="flex-1 min-h-0">
+        <div className="flex-1 w-full h-full overflow-hidden">
           <MapSearch onLocationSelect={handleLocationSelect} />
         </div>
       </div>

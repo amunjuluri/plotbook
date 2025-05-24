@@ -7,13 +7,11 @@ import { authClient } from "@/lib/auth-client";
 import {
   Search,
   Bookmark,
-  Download,
   Users,
   Settings,
-  BookOpen,
   LogOut,
-  Menu,
-  X,
+  ChevronLeft,
+  ChevronRight,
   Home
 } from "lucide-react";
 
@@ -31,7 +29,7 @@ interface NavItem {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -42,13 +40,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     }
   };
 
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
+  const toggleSidebar = () => {
+    setIsCollapsed(!isCollapsed);
   };
 
   const navItems: NavItem[] = [
     {
-      name: "Dashboard",
+      name: "Home",
       href: "/dashboard",
       icon: <Home className="h-5 w-5" />,
       active: pathname === "/dashboard"
@@ -66,101 +64,88 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       active: pathname === "/dashboard/saved"
     },
     {
-      name: "Exports",
-      href: "/dashboard/exports",
-      icon: <Download className="h-5 w-5" />,
-      active: pathname === "/dashboard/exports"
-    },
-    {
-      name: "My Team",
+      name: "Team",
       href: "/dashboard/team",
       icon: <Users className="h-5 w-5" />,
       active: pathname === "/dashboard/team"
     },
     {
-      name: "Profile Settings",
+      name: "Settings",
       href: "/dashboard/settings",
       icon: <Settings className="h-5 w-5" />,
       active: pathname === "/dashboard/settings"
-    },
-    {
-      name: "Usage Guide",
-      href: "/dashboard/guide",
-      icon: <BookOpen className="h-5 w-5" />,
-      active: pathname === "/dashboard/guide"
     }
   ];
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Mobile menu button */}
-      <div className="fixed top-0 left-0 z-20 md:hidden p-4">
-        <button
-          onClick={toggleMobileMenu}
-          className="p-2 rounded-md text-gray-700 hover:bg-gray-100"
-        >
-          {isMobileMenuOpen ? (
-            <X className="h-6 w-6" />
-          ) : (
-            <Menu className="h-6 w-6" />
-          )}
-        </button>
-      </div>
-
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-10 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${
-          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-        } md:translate-x-0`}
+        className={`${
+          isCollapsed ? "w-16" : "w-64"
+        } bg-white border-r border-gray-200 transition-all duration-300 ease-in-out flex flex-col`}
       >
-        <div className="h-full flex flex-col">
-          {/* Logo */}
-          <div className="px-6 py-6 flex items-center">
-            <h1 className="text-2xl font-bold">
+        {/* Header with Logo and Collapse Button */}
+        <div className="h-16 flex items-center justify-between px-4 border-b border-gray-100">
+          {!isCollapsed && (
+            <h1 className="text-xl font-semibold">
               <span className="text-[#D2966E]">Plot</span>
               <span className="text-[#1E1433]">Book</span>
             </h1>
-          </div>
+          )}
+          <button
+            onClick={toggleSidebar}
+            className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            {isCollapsed ? (
+              <ChevronRight className="h-4 w-4 text-gray-600" />
+            ) : (
+              <ChevronLeft className="h-4 w-4 text-gray-600" />
+            )}
+          </button>
+        </div>
 
-          {/* Nav Items */}
-          <nav className="flex-1 px-4 mt-4 space-y-1">
-            {navItems.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`flex items-center px-4 py-3 rounded-lg ${
-                  item.active
-                    ? "bg-[#1E1433] text-white"
-                    : "text-gray-700 hover:bg-gray-100"
-                } transition-colors`}
-                onClick={() => {
-                  if (isMobileMenuOpen) setIsMobileMenuOpen(false);
-                }}
-              >
-                <span className={`mr-3 ${item.active ? "text-white" : "text-[#1E1433]"}`}>
-                  {item.icon}
-                </span>
-                <span className="font-medium">{item.name}</span>
-              </Link>
-            ))}
-          </nav>
-
-          {/* Logout Button */}
-          <div className="px-4 py-6">
-            <button
-              onClick={handleLogout}
-              className="flex w-full items-center px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+        {/* Navigation */}
+        <nav className="flex-1 px-2 py-4 space-y-1">
+          {navItems.map((item) => (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={`flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors group ${
+                item.active
+                  ? "bg-[#1E1433] text-white"
+                  : "text-gray-700 hover:bg-gray-100"
+              }`}
+              title={isCollapsed ? item.name : undefined}
             >
-              <LogOut className="h-5 w-5 mr-3 text-[#1E1433]" />
-              <span className="font-medium">Logout</span>
-            </button>
-          </div>
+              <span className={`${item.active ? "text-white" : "text-gray-500"} ${isCollapsed ? "mx-auto" : "mr-3"}`}>
+                {item.icon}
+              </span>
+              {!isCollapsed && (
+                <span className="truncate">{item.name}</span>
+              )}
+            </Link>
+          ))}
+        </nav>
+
+        {/* Logout Button */}
+        <div className="px-2 py-4 border-t border-gray-100">
+          <button
+            onClick={handleLogout}
+            className="flex w-full items-center px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors group"
+            title={isCollapsed ? "Logout" : undefined}
+          >
+            <LogOut className={`h-5 w-5 text-gray-500 ${isCollapsed ? "mx-auto" : "mr-3"}`} />
+            {!isCollapsed && (
+              <span className="truncate">Logout</span>
+            )}
+          </button>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 ml-0 md:ml-64 transition-margin duration-300 h-full">
-        <main className="p-4 md:p-8 h-full">
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        <main className="flex-1 overflow-hidden w-full h-full">
           {children}
         </main>
       </div>

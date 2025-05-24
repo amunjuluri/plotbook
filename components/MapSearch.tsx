@@ -36,6 +36,7 @@ export function MapSearch({ onLocationSelect, initialLocation }: MapSearchProps)
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const marker = useRef<mapboxgl.Marker | null>(null);
+  const resizeObserver = useRef<ResizeObserver | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLocation, setSelectedLocation] = useState<PropertyLocation | null>(initialLocation || null);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -96,6 +97,19 @@ export function MapSearch({ onLocationSelect, initialLocation }: MapSearchProps)
         console.error('Map error:', e);
         setMapError('Error loading map');
       });
+
+      // Set up ResizeObserver to handle container size changes
+      if (mapContainer.current) {
+        resizeObserver.current = new ResizeObserver(() => {
+          if (map.current) {
+            // Add a small delay to ensure the container has finished resizing
+            setTimeout(() => {
+              map.current?.resize();
+            }, 100);
+          }
+        });
+        resizeObserver.current.observe(mapContainer.current);
+      }
       
     } catch (error) {
       console.error('Error initializing map:', error);
@@ -104,6 +118,9 @@ export function MapSearch({ onLocationSelect, initialLocation }: MapSearchProps)
     
     // Cleanup
     return () => {
+      if (resizeObserver.current) {
+        resizeObserver.current.disconnect();
+      }
       if (map.current) {
         map.current.remove();
         map.current = null;
