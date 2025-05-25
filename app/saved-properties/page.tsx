@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, Search, Filter, Tag, MapPin, Building, DollarSign, Square, Bed, Bath, Calendar, User, Trash2, Edit, Eye, Grid3X3, List, SortAsc, SortDesc } from 'lucide-react';
+import { Heart, Search, Filter, Tag, MapPin, Building, DollarSign, Square, Bed, Bath, Calendar, User, Trash2, Edit, Eye, Grid3X3, List, SortAsc, SortDesc, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,6 +11,7 @@ import { SavePropertyButton } from '@/components/SavePropertyButton';
 import { PropertyDetailPanel } from '@/components/PropertyDetailPanel';
 import { PropertyLocation } from '@/components/EnhancedMapSearch';
 import { DashboardLayout } from '@/components/DashboardLayout';
+import { ReportBuilderDialog } from '@/components/ReportBuilderDialog';
 
 export default function SavedPropertiesPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -20,6 +21,7 @@ export default function SavedPropertiesPage() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [showDetailPanel, setShowDetailPanel] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
 
   const { 
     savedProperties, 
@@ -146,6 +148,15 @@ export default function SavedPropertiesPage() {
 
                 {/* View Toggle */}
                 <div className="flex items-center gap-2">
+                  <Button 
+                    onClick={() => setShowReportDialog(true)}
+                    disabled={savedProperties.length === 0}
+                    className="flex items-center gap-2"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Generate Report
+                  </Button>
+                  
                   <div className="flex bg-gray-100 rounded-lg p-1">
                     <button
                       onClick={() => setViewMode('grid')}
@@ -505,6 +516,13 @@ export default function SavedPropertiesPage() {
           propertyId={selectedPropertyId}
           isOpen={showDetailPanel}
           onClose={closePropertyDetail}
+        />
+
+        {/* Report Builder Dialog */}
+        <ReportBuilderDialog
+          isOpen={showReportDialog}
+          onClose={() => setShowReportDialog(false)}
+          savedProperties={savedProperties}
         />
       </div>
     </DashboardLayout>
