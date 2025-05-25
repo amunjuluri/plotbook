@@ -8,6 +8,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============= AUTHENTICATION & USER MANAGEMENT =============
+
 model User {
   id            String    @id
   name          String
@@ -20,11 +22,34 @@ model User {
   banReason     String?
   banned        Boolean?
   role          String?
+  companyId     String?
+  
+  // Relations
   accounts      Account[]
   sessions      Session[]
   invitations   Invitation[]
+  company       Company?  @relation(fields: [companyId], references: [id])
+  savedProperties SavedProperty[]
+  searchFilters SavedSearchFilter[]
+  reports       Report[]
 
   @@map("user")
+}
+
+model Company {
+  id          String   @id @default(cuid())
+  name        String
+  logo        String?
+  domain      String?
+  industry    String?
+  size        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  employees   User[]
+  
+  @@map("company")
 }
 
 model Session {
@@ -83,4 +108,292 @@ model Invitation {
   admin      User      @relation(fields: [invitedBy], references: [id], onDelete: Cascade)
 
   @@map("invitation")
+}
+
+// ============= GEOGRAPHIC DATA =============
+
+model State {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  code        String   @unique // e.g., "CA", "NY"
+  region      String   // e.g., "West", "Northeast"
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  counties    County[]
+  cities      City[]
+  properties  Property[]
+  
+  @@map("state")
+}
+
+model County {
+  id          String   @id @default(cuid())
+  name        String
+  fipsCode    String   @unique // Federal Information Processing Standards code
+  stateId     String
+  population  Int?
+  area        Float?   // in square miles
+  medianIncome Float?
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  state       State    @relation(fields: [stateId], references: [id])
+  cities      City[]
+  properties  Property[]
+  
+  @@unique([name, stateId])
+  @@map("county")
+}
+
+model City {
+  id          String   @id @default(cuid())
+  name        String
+  stateId     String
+  countyId    String?
+  latitude    Float
+  longitude   Float
+  population  Int?
+  area        Float?   // in square miles
+  medianIncome Float?
+  zipCodes    String[] // Array of zip codes
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  state       State    @relation(fields: [stateId], references: [id])
+  county      County?  @relation(fields: [countyId], references: [id])
+  properties  Property[]
+  
+  @@unique([name, stateId])
+  @@map("city")
+}
+
+// ============= PROPERTY DATA =============
+
+model Property {
+  id              String   @id @default(cuid())
+  address         String
+  streetNumber    String?
+  streetName      String?
+  unit            String?
+  zipCode         String
+  latitude        Float
+  longitude       Float
+  
+  // Property Details
+  propertyType    String   // "residential", "commercial", "industrial", "land"
+  buildingType    String?  // "single_family", "condo", "apartment", "office", etc.
+  yearBuilt       Int?
+  squareFootage   Int?
+  lotSize         Float?   // in acres
+  bedrooms        Int?
+  bathrooms       Float?
+  stories         Int?
+  
+  // Financial Data
+  currentValue    Float?
+  assessedValue   Float?
+  taxAmount       Float?
+  lastSalePrice   Float?
+  lastSaleDate    DateTime?
+  
+  // Location Relations
+  stateId         String
+  countyId        String?
+  cityId          String?
+  
+  // Metadata
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  dataSource      String?  // "zillow", "county_records", etc.
+  confidence      Float?   // 0-1 confidence score
+  
+  // Relations
+  state           State    @relation(fields: [stateId], references: [id])
+  county          County?  @relation(fields: [countyId], references: [id])
+  city            City?    @relation(fields: [cityId], references: [id])
+  ownerships      PropertyOwnership[]
+  transactions    PropertyTransaction[]
+  savedBy         SavedProperty[]
+  
+  @@index([latitude, longitude])
+  @@index([zipCode])
+  @@index([propertyType])
+  @@index([currentValue])
+  @@map("property")
+}
+
+model PropertyOwnership {
+  id              String   @id @default(cuid())
+  propertyId      String
+  ownerId         String
+  ownershipType   String   // "sole", "joint", "trust", "corporate"
+  ownershipPercent Float   @default(100.0)
+  startDate       DateTime
+  endDate         DateTime?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  
+  // Relations
+  property        Property @relation(fields: [propertyId], references: [id])
+  owner           Owner    @relation(fields: [ownerId], references: [id])
+  
+  @@unique([propertyId, ownerId, startDate])
+  @@map("property_ownership")
+}
+
+model PropertyTransaction {
+  id              String   @id @default(cuid())
+  propertyId      String
+  transactionType String   // "sale", "purchase", "refinance", "transfer"
+  amount          Float
+  date            DateTime
+  buyerId         String?
+  sellerId        String?
+  documentType    String?  // "deed", "mortgage", "lien"
+  recordingDate   DateTime?
+  createdAt       DateTime @default(now())
+  
+  // Relations
+  property        Property @relation(fields: [propertyId], references: [id])
+  buyer           Owner?   @relation("BuyerTransactions", fields: [buyerId], references: [id])
+  seller          Owner?   @relation("SellerTransactions", fields: [sellerId], references: [id])
+  
+  @@index([date])
+  @@index([amount])
+  @@map("property_transaction")
+}
+
+// ============= OWNER & WEALTH DATA =============
+
+model Owner {
+  id              String   @id @default(cuid())
+  type            String   // "individual", "entity", "trust", "government"
+  
+  // Individual Data
+  firstName       String?
+  lastName        String?
+  middleName      String?
+  dateOfBirth     DateTime?
+  ssn             String?  // Encrypted
+  
+  // Entity Data
+  entityName      String?
+  entityType      String?  // "corporation", "llc", "partnership", "trust"
+  ein             String?  // Employer Identification Number
+  
+  // Contact Information
+  email           String?
+  phone           String?
+  mailingAddress  String?
+  
+  // Wealth Data
+  estimatedNetWorth Float?
+  wealthConfidence  Float?  // 0-1 confidence score
+  wealthLastUpdated DateTime?
+  wealthSources     String[] // Array of data sources
+  
+  // Business Information
+  occupation      String?
+  employer        String?
+  industry        String?
+  
+  // Metadata
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  dataSource      String?
+  isVerified      Boolean  @default(false)
+  
+  // Relations
+  ownerships      PropertyOwnership[]
+  wealthBreakdown WealthBreakdown[]
+  buyerTransactions PropertyTransaction[] @relation("BuyerTransactions")
+  sellerTransactions PropertyTransaction[] @relation("SellerTransactions")
+  
+  @@index([lastName, firstName])
+  @@index([entityName])
+  @@index([estimatedNetWorth])
+  @@map("owner")
+}
+
+model WealthBreakdown {
+  id              String   @id @default(cuid())
+  ownerId         String
+  category        String   // "real_estate", "stocks", "bonds", "business", "cash", "other"
+  amount          Float
+  percentage      Float?
+  confidence      Float?
+  lastUpdated     DateTime
+  dataSource      String?
+  
+  // Relations
+  owner           Owner    @relation(fields: [ownerId], references: [id])
+  
+  @@unique([ownerId, category])
+  @@map("wealth_breakdown")
+}
+
+// ============= USER FEATURES =============
+
+model SavedProperty {
+  id          String   @id @default(cuid())
+  userId      String
+  propertyId  String
+  notes       String?
+  tags        String[]
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  user        User     @relation(fields: [userId], references: [id])
+  property    Property @relation(fields: [propertyId], references: [id])
+  
+  @@unique([userId, propertyId])
+  @@map("saved_property")
+}
+
+model SavedSearchFilter {
+  id              String   @id @default(cuid())
+  userId          String
+  name            String
+  filters         Json     // Stored as JSON object
+  isDefault       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  user            User     @relation(fields: [userId], references: [id])
+  
+  @@map("saved_search_filter")
+}
+
+model Report {
+  id              String   @id @default(cuid())
+  userId          String
+  name            String
+  type            String   // "property_list", "wealth_analysis", "market_report"
+  parameters      Json     // Report parameters as JSON
+  generatedAt     DateTime @default(now())
+  fileUrl         String?  // URL to generated report file
+  status          String   @default("pending") // "pending", "completed", "failed"
+  
+  // Relations
+  user            User     @relation(fields: [userId], references: [id])
+  
+  @@map("report")
+}
+
+// ============= SYSTEM DATA =============
+
+model DataSource {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  type            String   // "api", "file", "manual"
+  url             String?
+  apiKey          String?  // Encrypted
+  lastSync        DateTime?
+  isActive        Boolean  @default(true)
+  rateLimit       Int?     // Requests per minute
+  createdAt       DateTime @default(now())
+  
+  @@map("data_source")
 }
