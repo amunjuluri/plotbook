@@ -11,8 +11,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { SearchIcon, Satellite, Map, User, MapPin, Home, X, Trash2, MoreVertical, Target, Trash, ChevronDown, Building, DollarSign, Bed, Bath, Square, List, Grid3X3, Filter, ChevronUp, SlidersHorizontal, Calendar, TrendingUp } from "lucide-react";
+import { SearchIcon, Satellite, Map, User, MapPin, Home, X, Trash2, MoreVertical, Target, Trash, ChevronDown, Building, DollarSign, Bed, Bath, Square, List, Grid3X3, Filter, ChevronUp, SlidersHorizontal, Calendar, TrendingUp, Heart } from "lucide-react";
 import { PropertyDetailPanel } from "./PropertyDetailPanel";
+import { SavePropertyButton } from "./SavePropertyButton";
+import Link from "next/link";
 
 // Mapbox token
 mapboxgl.accessToken = 'pk.eyJ1IjoiYW5hbmRtdW5qdWx1cmkiLCJhIjoiY21hcGh3cHY4MGdkZjJqczNzaGQwbjRrbiJ9.0Ku8xuOZeSjD7Oojk7L6vQ';
@@ -957,6 +959,25 @@ export function EnhancedMapSearch({
             >
               <h1 className="text-xl sm:text-2xl font-cal-sans font-bold text-gray-900">PlotBook</h1>
               <span className="text-xs sm:text-sm text-gray-500 font-medium hidden sm:inline">Property Intelligence</span>
+            </motion.div>
+            
+            {/* Navigation Links */}
+            <motion.div 
+              className="flex items-center gap-3"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.05 }}
+            >
+              <Link href="/saved-properties">
+                <motion.button
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-pink-600 hover:bg-pink-50 rounded-lg transition-all duration-200"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Heart className="h-4 w-4" />
+                  <span className="hidden sm:inline">Saved</span>
+                </motion.button>
+              </Link>
             </motion.div>
             
             {/* View Toggle Controls */}
@@ -2504,17 +2525,25 @@ export function EnhancedMapSearch({
                             {/* Actions */}
                             <div className="flex flex-col gap-2">
                               {property.propertyType !== 'location' && (
-                                <Button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    openPropertyDetail(property.id);
-                                  }}
-                                  size="sm"
-                                  className="bg-blue-600 hover:bg-blue-700"
-                                >
-                                  <Building className="h-4 w-4 mr-2" />
-                                  Details
-                                </Button>
+                                <>
+                                  <SavePropertyButton
+                                    property={property}
+                                    variant="outline"
+                                    size="sm"
+                                    showText={true}
+                                  />
+                                  <Button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openPropertyDetail(property.id);
+                                    }}
+                                    size="sm"
+                                    className="bg-blue-600 hover:bg-blue-700"
+                                  >
+                                    <Building className="h-4 w-4 mr-2" />
+                                    Details
+                                  </Button>
+                                </>
                               )}
                               
                               <Button
@@ -2623,14 +2652,23 @@ export function EnhancedMapSearch({
                 
                 {/* View Details Button */}
                 {selectedProperty.propertyType !== 'location' && (
-                  <motion.button
-                    onClick={() => openPropertyDetail(selectedProperty.id)}
-                    className="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium py-2 px-3 rounded-lg transition-colors"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    View Full Details
-                  </motion.button>
+                  <div className="mt-3 space-y-2">
+                    <SavePropertyButton
+                      property={selectedProperty}
+                      variant="outline"
+                      size="sm"
+                      showText={true}
+                      className="w-full"
+                    />
+                    <motion.button
+                      onClick={() => openPropertyDetail(selectedProperty.id)}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium py-2 px-3 rounded-lg transition-colors"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      View Full Details
+                    </motion.button>
+                  </div>
                 )}
               </div>
               

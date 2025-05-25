@@ -50,6 +50,8 @@ import {
   type PropertyMetrics,
   type OwnershipAnalysis
 } from "@/utils/propertyAnalytics";
+import { SavePropertyButton } from "./SavePropertyButton";
+import { PropertyLocation } from "./EnhancedMapSearch";
 
 interface PropertyOwnership {
   id: string;
@@ -226,12 +228,39 @@ export function PropertyDetailPanel({ propertyId, onClose, isOpen }: PropertyDet
 
   const getPropertyTypeColor = (type: string) => {
     switch (type.toLowerCase()) {
-      case 'residential': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'commercial': return 'bg-blue-50 text-blue-700 border-blue-200';
-      case 'industrial': return 'bg-orange-50 text-orange-700 border-orange-200';
-      case 'land': return 'bg-purple-50 text-purple-700 border-purple-200';
-      default: return 'bg-gray-50 text-gray-700 border-gray-200';
+      case 'residential':
+        return 'bg-green-50 text-green-700 border-green-200';
+      case 'commercial':
+        return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'industrial':
+        return 'bg-orange-50 text-orange-700 border-orange-200';
+      case 'land':
+        return 'bg-purple-50 text-purple-700 border-purple-200';
+      default:
+        return 'bg-gray-50 text-gray-700 border-gray-200';
     }
+  };
+
+  // Convert property to PropertyLocation format for SavePropertyButton
+  const convertToPropertyLocation = (property: DetailedProperty): PropertyLocation => {
+    return {
+      id: property.id,
+      latitude: property.latitude,
+      longitude: property.longitude,
+      address: property.address,
+      propertyType: property.propertyType,
+      currentValue: property.currentValue || 0,
+      formattedValue: property.formattedCurrentValue,
+      squareFootage: property.squareFootage,
+      bedrooms: property.bedrooms,
+      bathrooms: property.bathrooms,
+      city: property.location.city,
+      state: property.location.state,
+      stateCode: property.location.stateCode,
+      title: property.address,
+      description: `${property.propertyType} • ${property.formattedCurrentValue}`,
+      yearBuilt: property.yearBuilt
+    };
   };
 
   return (
@@ -273,14 +302,24 @@ export function PropertyDetailPanel({ propertyId, onClose, isOpen }: PropertyDet
                     {property?.address || 'Loading property information...'}
                   </p>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onClose}
-                  className="h-9 w-9 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
-                >
-                  <X className="h-5 w-5" />
-                </Button>
+                <div className="flex items-center gap-3">
+                  {property && (
+                    <SavePropertyButton
+                      property={convertToPropertyLocation(property)}
+                      variant="outline"
+                      size="sm"
+                      showText={true}
+                    />
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onClose}
+                    className="h-9 w-9 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
               </div>
 
               {/* Content */}

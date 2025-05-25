@@ -13,18 +13,23 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  Home
+  Home,
+  Heart,
+  Map,
+  User
 } from "lucide-react";
+import { Button } from '@/components/ui/button';
 
 interface DashboardLayoutProps {
   children: ReactNode;
 }
 
-interface NavItem {
+interface NavigationItem {
   name: string;
   href: string;
-  icon: React.ReactNode;
+  icon: React.ComponentType<{ className?: string }>;
   active?: boolean;
+  description: string;
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
@@ -45,155 +50,170 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     setIsCollapsed(!isCollapsed);
   };
 
-  const navItems: NavItem[] = [
+  const navigationItems: NavigationItem[] = [
     {
-      name: "Home",
+      name: "Map Search",
+      href: "/",
+      icon: Map,
+      description: "Search and explore properties",
+      active: pathname === "/"
+    },
+    {
+      name: "Saved Properties",
+      href: "/saved-properties",
+      icon: Heart,
+      description: "View your saved properties",
+      active: pathname === "/saved-properties"
+    },
+    {
+      name: "Dashboard",
       href: "/dashboard",
-      icon: <Home className="h-5 w-5" />,
+      icon: Home,
+      description: "Overview and analytics",
       active: pathname === "/dashboard"
     },
     {
-      name: "Search",
-      href: "/dashboard/search",
-      icon: <Search className="h-5 w-5" />,
-      active: pathname === "/dashboard/search"
-    },
-    {
-      name: "Saved",
-      href: "/dashboard/saved",
-      icon: <Bookmark className="h-5 w-5" />,
-      active: pathname === "/dashboard/saved"
-    },
-    {
-      name: "Team",
-      href: "/dashboard/team",
-      icon: <Users className="h-5 w-5" />,
-      active: pathname === "/dashboard/team"
-    },
-    {
-      name: "Settings",
-      href: "/dashboard/settings",
-      icon: <Settings className="h-5 w-5" />,
-      active: pathname === "/dashboard/settings"
+      name: "Profile",
+      href: "/profile",
+      icon: User,
+      description: "Manage your account",
+      active: pathname === "/profile"
     }
   ];
 
+  const isActive = (href: string) => {
+    if (href === "/") {
+      return pathname === "/";
+    }
+    return pathname.startsWith(href);
+  };
+
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <motion.div
-        initial={false}
-        animate={{ width: isCollapsed ? 64 : 256 }}
-        transition={{ duration: 0.3, ease: "easeInOut" }}
-        className="bg-white border-r border-gray-200 flex flex-col shadow-sm"
-      >
-        {/* Header with Logo and Collapse Button */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-gray-100">
-          <AnimatePresence mode="wait">
-            {!isCollapsed && (
-              <motion.h1
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.2 }}
-                className="text-xl font-cal-sans font-bold"
-              >
-                <span className="text-[#D2966E]">Plot</span>
-                <span className="text-[#1E1433]">Book</span>
-              </motion.h1>
-            )}
-          </AnimatePresence>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={toggleSidebar}
-            className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
-          >
-            <motion.div
-              animate={{ rotate: isCollapsed ? 0 : 180 }}
-              transition={{ duration: 0.3 }}
+    <div className="min-h-screen bg-gray-50">
+      {/* Top Navigation Bar */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo */}
+            <motion.div 
+              className="flex items-center space-x-3"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5 }}
             >
-              {isCollapsed ? (
-                <ChevronRight className="h-4 w-4 text-gray-600" />
-              ) : (
-                <ChevronLeft className="h-4 w-4 text-gray-600" />
-              )}
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">P</span>
+              </div>
+              <div>
+                <h1 className="text-xl font-cal-sans font-bold text-gray-900">PlotBook</h1>
+                <p className="text-xs text-gray-500 hidden sm:block">Property Intelligence</p>
+              </div>
             </motion.div>
-          </motion.button>
-        </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-2 py-4 space-y-1">
-          {navItems.map((item, index) => (
-            <motion.div
-              key={item.name}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
+            {/* Desktop Navigation */}
+            <nav className="hidden md:flex items-center space-x-1">
+              {navigationItems.map((item, index) => {
+                const IconComponent = item.icon;
+                return (
+                  <motion.div
+                    key={item.href}
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.1 }}
+                  >
+                    <Link href={item.href}>
+                      <motion.div
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                          isActive(item.href)
+                            ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                        }`}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <IconComponent className="h-4 w-4" />
+                        <span>{item.name}</span>
+                      </motion.div>
+                    </Link>
+                  </motion.div>
+                );
+              })}
+            </nav>
+
+            {/* User Menu */}
+            <motion.div 
+              className="flex items-center gap-3"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <Link
-                href={item.href}
-                className={`flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group ${
-                  item.active
-                    ? "bg-blue-600 text-white shadow-sm"
-                    : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                }`}
-                title={isCollapsed ? item.name : undefined}
-              >
-                <span className={`${item.active ? "text-white" : "text-gray-500 group-hover:text-gray-700"} ${isCollapsed ? "mx-auto" : "mr-3"}`}>
-                  {item.icon}
-                </span>
-                <AnimatePresence mode="wait">
-                  {!isCollapsed && (
-                    <motion.span
-                      initial={{ opacity: 0, width: 0 }}
-                      animate={{ opacity: 1, width: "auto" }}
-                      exit={{ opacity: 0, width: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="truncate"
-                    >
-                      {item.name}
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </Link>
+              <Button variant="ghost" size="sm" className="hidden sm:flex">
+                <Settings className="h-4 w-4 mr-2" />
+                Settings
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleLogout}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
             </motion.div>
-          ))}
-        </nav>
-
-        {/* Logout Button */}
-        <div className="px-2 py-4 border-t border-gray-100">
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={handleLogout}
-            className="flex w-full items-center px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-all duration-200 group"
-            title={isCollapsed ? "Logout" : undefined}
-          >
-            <LogOut className={`h-5 w-5 text-gray-500 group-hover:text-gray-700 ${isCollapsed ? "mx-auto" : "mr-3"}`} />
-            <AnimatePresence mode="wait">
-              {!isCollapsed && (
-                <motion.span
-                  initial={{ opacity: 0, width: 0 }}
-                  animate={{ opacity: 1, width: "auto" }}
-                  exit={{ opacity: 0, width: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="truncate"
-                >
-                  Logout
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </motion.button>
+          </div>
         </div>
-      </motion.div>
+      </header>
+
+      {/* Mobile Navigation */}
+      <nav className="md:hidden bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-between py-3 overflow-x-auto">
+            {navigationItems.map((item) => {
+              const IconComponent = item.icon;
+              return (
+                <Link key={item.href} href={item.href} className="flex-shrink-0">
+                  <motion.div
+                    className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
+                      isActive(item.href)
+                        ? 'bg-blue-50 text-blue-700'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    }`}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <IconComponent className="h-4 w-4" />
+                    <span className="whitespace-nowrap">{item.name}</span>
+                  </motion.div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </nav>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden min-w-0 bg-gray-50">
-        <main className="flex-1 overflow-auto w-full h-full">
-          {children}
-        </main>
-      </div>
+      <main className="flex-1">
+        {children}
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-white border-t border-gray-200 mt-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="w-4 h-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded"></div>
+              <span>© 2024 PlotBook. All rights reserved.</span>
+            </div>
+            <div className="flex items-center gap-6 text-sm text-gray-500">
+              <Link href="/privacy" className="hover:text-gray-700 transition-colors">
+                Privacy Policy
+              </Link>
+              <Link href="/terms" className="hover:text-gray-700 transition-colors">
+                Terms of Service
+              </Link>
+              <Link href="/support" className="hover:text-gray-700 transition-colors">
+                Support
+              </Link>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 } 
