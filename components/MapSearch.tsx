@@ -7,32 +7,60 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { SearchIcon, Satellite, Map, User, MapPin, Home } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
+import { SearchIcon, Satellite, Map, User, MapPin, Home, X, Trash2, MoreVertical, Target, Trash, ChevronDown } from "lucide-react";
 
 // Mapbox token from documentation
 mapboxgl.accessToken = 'pk.eyJ1IjoiYW5hbmRtdW5qdWx1cmkiLCJhIjoiY21hcGh3cHY4MGdkZjJqczNzaGQwbjRrbiJ9.0Ku8xuOZeSjD7Oojk7L6vQ';
 
 export interface PropertyLocation {
+  id?: string;
   latitude: number;
   longitude: number;
   address?: string;
+  color?: string; // Optional color for the marker
 }
 
 interface MapSearchProps {
   onLocationSelect?: (location: PropertyLocation) => void;
+  onLocationsChange?: (locations: PropertyLocation[]) => void;
   initialLocation?: PropertyLocation;
+  initialLocations?: PropertyLocation[]; // Support for multiple initial locations
+  allowMultiple?: boolean; // Whether to allow multiple pins (default: true)
+  maxPins?: number; // Maximum number of pins allowed
+  onAddPin?: (addPinFunction: (lat: number, lng: number, address?: string, color?: string) => void) => void; // Callback to expose addPin function
 }
 
-export function MapSearch({ onLocationSelect, initialLocation }: MapSearchProps) {
+export function MapSearch({ 
+  onLocationSelect, 
+  onLocationsChange,
+  initialLocation, 
+  initialLocations = [],
+  allowMultiple = true,
+  maxPins = 10,
+  onAddPin
+}: MapSearchProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
-  const marker = useRef<mapboxgl.Marker | null>(null);
+  const markers = useRef<Record<string, mapboxgl.Marker>>({}); // Store markers by ID
   const resizeObserver = useRef<ResizeObserver | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedLocation, setSelectedLocation] = useState<PropertyLocation | null>(initialLocation || null);
+  const [locations, setLocations] = useState<PropertyLocation[]>(() => {
+    // Initialize with either initialLocations or single initialLocation
+    if (initialLocations.length > 0) {
+      return initialLocations;
+    } else if (initialLocation) {
+      return [{ ...initialLocation, id: initialLocation.id || 'initial-location' }];
+    }
+    return [];
+  });
+  const [selectedLocation, setSelectedLocation] = useState<PropertyLocation | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
   const [isSatellite, setIsSatellite] = useState(true);
   const [activeTab, setActiveTab] = useState('address');
+
+  // Generate unique ID for locations
+  const generateLocationId = () => `location-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
   // Initialize map when component mounts
   useEffect(() => {
@@ -42,8 +70,8 @@ export function MapSearch({ onLocationSelect, initialLocation }: MapSearchProps)
     
     try {
       // Initial center based on props or default to NYC
-      const initialCenter = initialLocation 
-        ? [initialLocation.longitude, initialLocation.latitude]
+      const initialCenter = locations.length > 0
+        ? [locations[0].longitude, locations[0].latitude]
         : [-74.0060, 40.7128]; // Default to NYC
       
       // Initialize the map with Mapbox Standard style
@@ -51,7 +79,7 @@ export function MapSearch({ onLocationSelect, initialLocation }: MapSearchProps)
         container: mapContainer.current,
         style: isSatellite ? 'mapbox://styles/mapbox/standard-satellite' : 'mapbox://styles/mapbox/standard',
         center: initialCenter as [number, number],
-        zoom: initialLocation ? 15 : 12,
+        zoom: locations.length > 0 ? 15 : 12,
         projection: 'globe', // Using the globe projection for a more modern look
       });
       
@@ -78,9 +106,14 @@ export function MapSearch({ onLocationSelect, initialLocation }: MapSearchProps)
           'star-intensity': 0.0
         });
         
-        // Add marker if initial location provided
-        if (initialLocation) {
-          addMarker(initialLocation.longitude, initialLocation.latitude);
+        // Add markers for all initial locations
+        locations.forEach(location => {
+          addMarker(location);
+        });
+        
+        // Fit map to show all markers if multiple locations
+        if (locations.length > 1) {
+          fitMapToMarkers();
         }
       });
       
@@ -113,20 +146,25 @@ export function MapSearch({ onLocationSelect, initialLocation }: MapSearchProps)
       if (resizeObserver.current) {
         resizeObserver.current.disconnect();
       }
+      // Clear all markers
+      Object.values(markers.current).forEach(marker => marker.remove());
+      markers.current = {};
       if (map.current) {
         map.current.remove();
         map.current = null;
       }
     };
-  }, [initialLocation]);
+  }, []); // Remove initialLocation dependency to avoid re-initialization
   
   // Create or update marker
-  const addMarker = (longitude: number, latitude: number) => {
+  const addMarker = (location: PropertyLocation) => {
     if (!map.current) return;
     
+    const locationId = location.id || generateLocationId();
+    
     // Remove existing marker if it exists
-    if (marker.current) {
-      marker.current.remove();
+    if (markers.current[locationId]) {
+      markers.current[locationId]?.remove();
     }
     
     // Create marker element
@@ -135,32 +173,96 @@ export function MapSearch({ onLocationSelect, initialLocation }: MapSearchProps)
     el.style.width = '24px';
     el.style.height = '24px';
     el.style.borderRadius = '50%';
-    el.style.backgroundColor = '#D2966E';
+    el.style.backgroundColor = location.color || '#D2966E';
     el.style.border = '2px solid white';
+    el.style.cursor = 'pointer';
+    el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
     
-    // Create and add new marker
-    marker.current = new mapboxgl.Marker(el)
-      .setLngLat([longitude, latitude])
-      .addTo(map.current);
-  };
-  
-  // Update map when initialLocation changes
-  useEffect(() => {
-    if (!map.current || !initialLocation) return;
-    
-    // Fly to location with animation
-    map.current.flyTo({
-      center: [initialLocation.longitude, initialLocation.latitude],
-      zoom: 15,
-      essential: true
+    // Add click handler to marker
+    el.addEventListener('click', () => {
+      setSelectedLocation(location);
+      // Fly to the clicked marker
+      map.current?.flyTo({
+        center: [location.longitude, location.latitude],
+        zoom: 15,
+        essential: true
+      });
     });
     
-    // Add marker
-    addMarker(initialLocation.longitude, initialLocation.latitude);
+    // Create and add new marker
+    const marker = new mapboxgl.Marker(el)
+      .setLngLat([location.longitude, location.latitude])
+      .addTo(map.current);
     
-    // Update selected location state
-    setSelectedLocation(initialLocation);
-  }, [initialLocation]);
+    // Store marker reference
+    markers.current[locationId] = marker;
+    
+    return locationId;
+  };
+
+  // Remove a specific marker
+  const removeMarker = (locationId: string) => {
+    const marker = markers.current[locationId];
+    if (marker) {
+      marker.remove();
+      delete markers.current[locationId];
+    }
+  };
+
+  // Clear all markers
+  const clearAllMarkers = () => {
+    Object.values(markers.current).forEach(marker => marker.remove());
+    markers.current = {};
+    setLocations([]);
+    setSelectedLocation(null);
+    if (onLocationsChange) {
+      onLocationsChange([]);
+    }
+  };
+
+  // Fit map to show all markers
+  const fitMapToMarkers = () => {
+    if (!map.current || locations.length === 0) return;
+    
+    if (locations.length === 1) {
+      // Single location - just center on it
+      map.current.flyTo({
+        center: [locations[0].longitude, locations[0].latitude],
+        zoom: 15,
+        essential: true
+      });
+    } else {
+      // Multiple locations - fit bounds
+      const bounds = new mapboxgl.LngLatBounds();
+      locations.forEach(location => {
+        bounds.extend([location.longitude, location.latitude]);
+      });
+      
+      map.current.fitBounds(bounds, {
+        padding: { top: 50, bottom: 50, left: 50, right: 50 },
+        maxZoom: 15
+      });
+    }
+  };
+
+  // Update locations when they change
+  useEffect(() => {
+    if (!map.current) return;
+    
+    // Clear existing markers
+    Object.values(markers.current).forEach(marker => marker.remove());
+    markers.current = {};
+    
+    // Add new markers
+    locations.forEach(location => {
+      addMarker(location);
+    });
+    
+    // Fit map to show all markers
+    if (locations.length > 0) {
+      fitMapToMarkers();
+    }
+  }, [locations]);
   
   const handleSearch = async () => {
     if (!map.current || !searchQuery.trim()) return;
@@ -180,31 +282,48 @@ export function MapSearch({ onLocationSelect, initialLocation }: MapSearchProps)
       // Handle Mapbox geocoding response
       if (data.features && data.features.length > 0) {
         const [longitude, latitude] = data.features[0].center;
-        const location = {
+        const newLocation: PropertyLocation = {
+          id: generateLocationId(),
           latitude,
           longitude,
           address: data.features[0].place_name
         };
         
-        console.log('Found location:', location);
+        console.log('Found location:', newLocation);
         
-        // Update state
-        setSelectedLocation(location);
+        // Update state based on allowMultiple setting
+        if (allowMultiple && locations.length < maxPins) {
+          // Add to existing locations
+          const updatedLocations = [...locations, newLocation];
+          setLocations(updatedLocations);
+          if (onLocationsChange) {
+            onLocationsChange(updatedLocations);
+          }
+        } else {
+          // Replace existing location(s)
+          setLocations([newLocation]);
+          if (onLocationsChange) {
+            onLocationsChange([newLocation]);
+          }
+        }
         
-        // Update map
+        // Update selected location
+        setSelectedLocation(newLocation);
+        
+        // Update map view
         map.current.flyTo({
-          center: [location.longitude, location.latitude],
+          center: [newLocation.longitude, newLocation.latitude],
           zoom: 15,
           essential: true
         });
         
-        // Add marker
-        addMarker(location.longitude, location.latitude);
-        
         // Notify parent component
         if (onLocationSelect) {
-          onLocationSelect(location);
+          onLocationSelect(newLocation);
         }
+        
+        // Clear search query
+        setSearchQuery('');
       } else {
         console.log('No results found');
       }
@@ -212,6 +331,68 @@ export function MapSearch({ onLocationSelect, initialLocation }: MapSearchProps)
       console.error('Error searching location:', error);
     }
   };
+
+  // Remove a specific location
+  const removeLocation = (locationId: string) => {
+    const updatedLocations = locations.filter(loc => loc.id !== locationId);
+    setLocations(updatedLocations);
+    removeMarker(locationId);
+    
+    // Update selected location if it was the removed one
+    if (selectedLocation?.id === locationId) {
+      setSelectedLocation(updatedLocations.length > 0 ? updatedLocations[0] : null);
+    }
+    
+    if (onLocationsChange) {
+      onLocationsChange(updatedLocations);
+    }
+  };
+
+  // Programmatically add a pin with coordinates
+  const addPinProgrammatically = (lat: number, lng: number, address?: string, color?: string) => {
+    if (locations.length >= maxPins) {
+      console.warn(`Maximum pins reached (${maxPins}). Cannot add more pins.`);
+      return;
+    }
+
+    const newLocation: PropertyLocation = {
+      id: generateLocationId(),
+      latitude: lat,
+      longitude: lng,
+      address: address || `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+      color: color || '#D2966E'
+    };
+
+    const updatedLocations = allowMultiple ? [...locations, newLocation] : [newLocation];
+    setLocations(updatedLocations);
+    setSelectedLocation(newLocation);
+
+    // Update map view to show the new pin
+    if (map.current) {
+      map.current.flyTo({
+        center: [lng, lat],
+        zoom: 15,
+        essential: true
+      });
+    }
+
+    // Notify parent components
+    if (onLocationSelect) {
+      onLocationSelect(newLocation);
+    }
+    if (onLocationsChange) {
+      onLocationsChange(updatedLocations);
+    }
+
+    return newLocation;
+  };
+
+  // Expose addPin function to parent component
+  useEffect(() => {
+    if (onAddPin) {
+      onAddPin(addPinProgrammatically);
+    }
+  }, [onAddPin, locations.length, maxPins, allowMultiple]);
 
   const toggleMapStyle = () => {
     if (!map.current) return;
@@ -226,7 +407,7 @@ export function MapSearch({ onLocationSelect, initialLocation }: MapSearchProps)
     // Change map style
     map.current.setStyle(newStyle);
     
-    // Restore view and re-add marker after style loads
+    // Restore view and re-add markers after style loads
     map.current.once('style.load', () => {
       // Restore the previous center and zoom
       map.current?.jumpTo({
@@ -234,10 +415,10 @@ export function MapSearch({ onLocationSelect, initialLocation }: MapSearchProps)
         zoom: currentZoom
       });
       
-      // Re-add marker if there's a selected location
-      if (selectedLocation) {
-        addMarker(selectedLocation.longitude, selectedLocation.latitude);
-      }
+      // Re-add all markers
+      locations.forEach(location => {
+        addMarker(location);
+      });
     });
   };
 
@@ -272,7 +453,7 @@ export function MapSearch({ onLocationSelect, initialLocation }: MapSearchProps)
   return (
     <div className="relative w-full h-full">
       {/* Top navigation bar with responsive tabs/dropdown */}
-      <div className="absolute top-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm">
+      <div className="absolute top-0 left-0 right-0 z-[50] bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm">
         <div className="px-4 sm:px-6 py-3 sm:py-4">
           {/* Brand Header */}
           <div className="flex items-center justify-between mb-3 sm:mb-4">
@@ -456,7 +637,7 @@ export function MapSearch({ onLocationSelect, initialLocation }: MapSearchProps)
       </div>
 
       {/* Map style toggle button positioned on bottom-right */}
-      <div className="absolute bottom-4 right-4 z-10">
+      <div className="absolute bottom-4 right-4 z-[90]">
         <motion.div
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -477,6 +658,207 @@ export function MapSearch({ onLocationSelect, initialLocation }: MapSearchProps)
           </Button>
         </motion.div>
       </div>
+
+      {/* Compact Pin Management Dropdown - Mobile Friendly */}
+      <AnimatePresence>
+        {allowMultiple && locations.length > 0 && (
+          <motion.div 
+            className="absolute top-4 right-4 z-[100]"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ duration: 0.3 }}
+          >
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Button
+                    variant="outline"
+                    className="bg-white/95 backdrop-blur-sm border-gray-200 shadow-lg hover:bg-gray-50 focus:outline-none transition-all duration-200 h-10 px-3 rounded-lg"
+                  >
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm font-medium text-gray-900">
+                        {locations.length}
+                      </span>
+                      <ChevronDown className="h-3 w-3 text-gray-500" />
+                    </div>
+                  </Button>
+                </motion.div>
+              </DropdownMenuTrigger>
+              
+              <DropdownMenuContent 
+                align="end" 
+                className="w-80 z-[110] bg-white border border-gray-200 shadow-xl rounded-lg p-0 max-h-96 overflow-hidden"
+                style={{ zIndex: 110 }}
+                sideOffset={8}
+              >
+                {/* Header */}
+                <div className="p-3 border-b border-gray-100 bg-gray-50/50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm font-semibold text-gray-900">
+                        Pins ({locations.length}/{maxPins})
+                      </span>
+                    </div>
+                    
+                    {locations.length > 1 && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-7 w-7 p-0 hover:bg-gray-200 rounded-md"
+                          >
+                            <MoreVertical className="h-3 w-3" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-44 z-[120]" style={{ zIndex: 120 }}>
+                          <DropdownMenuItem 
+                            onClick={fitMapToMarkers}
+                            className="cursor-pointer hover:bg-blue-50 focus:bg-blue-50"
+                          >
+                            <Target className="mr-2 h-3 w-3 text-blue-600" />
+                            <span className="text-gray-900">Fit All Pins</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            onClick={clearAllMarkers}
+                            className="cursor-pointer hover:bg-red-50 focus:bg-red-50"
+                          >
+                            <Trash className="mr-2 h-3 w-3 text-red-600" />
+                            <span className="text-red-600">Remove All</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Pins List */}
+                <div className="max-h-64 overflow-y-auto">
+                  {locations.map((location, index) => (
+                    <motion.div
+                      key={location.id}
+                      className={`border-b border-gray-50 last:border-b-0 transition-colors ${
+                        selectedLocation?.id === location.id 
+                          ? 'bg-blue-50' 
+                          : 'hover:bg-gray-50'
+                      }`}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                    >
+                      <div className="p-3">
+                        <div className="flex items-center gap-3">
+                          {/* Pin indicator */}
+                          <motion.div 
+                            className="flex-shrink-0"
+                            whileHover={{ scale: 1.1 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <div 
+                              className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
+                              style={{ backgroundColor: location.color || '#D2966E' }}
+                            />
+                          </motion.div>
+                          
+                          {/* Pin info - clickable area */}
+                          <motion.div 
+                            className="flex-1 min-w-0 cursor-pointer"
+                            onClick={() => {
+                              setSelectedLocation(location);
+                              map.current?.flyTo({
+                                center: [location.longitude, location.latitude],
+                                zoom: 15,
+                                essential: true
+                              });
+                            }}
+                            whileHover={{ x: 2 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs font-semibold text-gray-900">
+                                Pin {index + 1}
+                              </span>
+                              {selectedLocation?.id === location.id && (
+                                <motion.span 
+                                  className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full"
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  transition={{ duration: 0.2 }}
+                                >
+                                  Selected
+                                </motion.span>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-600 break-words leading-relaxed">
+                              {location.address || `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`}
+                            </p>
+                          </motion.div>
+                          
+                          {/* Quick actions */}
+                          <div className="flex items-center gap-1">
+                            <motion.button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedLocation(location);
+                                map.current?.flyTo({
+                                  center: [location.longitude, location.latitude],
+                                  zoom: 15,
+                                  essential: true
+                                });
+                              }}
+                              className="p-1.5 hover:bg-blue-100 rounded-md transition-colors"
+                              title="Focus on pin"
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                            >
+                              <Target className="h-3 w-3 text-blue-600" />
+                            </motion.button>
+                            
+                            <motion.button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeLocation(location.id!);
+                              }}
+                              className="p-1.5 hover:bg-red-100 rounded-md transition-colors"
+                              title="Remove pin"
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                            >
+                              <X className="h-3 w-3 text-red-600" />
+                            </motion.button>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+                
+                {/* Footer */}
+                {locations.length >= maxPins && (
+                  <motion.div 
+                    className="p-3 border-t border-gray-100 bg-gradient-to-r from-amber-50 to-orange-50"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                  >
+                    <p className="text-xs text-amber-700 text-center font-medium flex items-center justify-center gap-1">
+                      <span className="w-1.5 h-1.5 bg-amber-500 rounded-full"></span>
+                      Maximum pins reached ({maxPins})
+                    </p>
+                  </motion.div>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </motion.div>
+        )}
+      </AnimatePresence>
       
       {/* Map container taking full space with responsive top margin */}
       {mapError ? (
@@ -508,14 +890,37 @@ export function MapSearch({ onLocationSelect, initialLocation }: MapSearchProps)
       <AnimatePresence>
         {selectedLocation && (
           <motion.div 
-            className="absolute bottom-4 left-4 right-4 sm:right-auto bg-white/95 backdrop-blur-sm p-3 rounded-lg shadow-lg max-w-sm z-10 border border-gray-200"
+            className="absolute bottom-4 left-4 right-4 sm:right-auto bg-white/95 backdrop-blur-sm p-3 rounded-lg shadow-lg max-w-sm z-[80] border border-gray-200"
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
             transition={{ duration: 0.3 }}
           >
-            <p className="font-medium text-xs sm:text-sm">Selected Location:</p>
-            <p className="text-muted-foreground text-xs break-words">{selectedLocation.address || `${selectedLocation.latitude}, ${selectedLocation.longitude}`}</p>
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <div 
+                    className="w-3 h-3 rounded-full border border-white shadow-sm"
+                    style={{ backgroundColor: selectedLocation.color || '#D2966E' }}
+                  />
+                  <p className="font-medium text-xs sm:text-sm">Selected Location</p>
+                </div>
+                <p className="text-muted-foreground text-xs break-words">
+                  {selectedLocation.address || `${selectedLocation.latitude}, ${selectedLocation.longitude}`}
+                </p>
+              </div>
+              {allowMultiple && locations.length > 1 && (
+                <motion.button
+                  onClick={() => setSelectedLocation(null)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+                  title="Close"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <X className="h-3 w-3" />
+                </motion.button>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
