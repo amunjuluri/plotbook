@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatsCard } from "@/components/ui/stats-card";
 import { EnhancedMapSearch, PropertyLocation } from "@/components/EnhancedMapSearch";
 import { Building, Users, DollarSign, Bookmark } from "lucide-react";
+import { toast } from "sonner";
 
 interface DashboardStats {
   totalProperties: string;
@@ -29,9 +30,18 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const checkAuth = async () => {
+      // Show initial loading toast
+      const loadingToast = toast.loading("Loading dashboard...", {
+        description: "Verifying permissions and fetching data"
+      });
+
       try {
         const session = await authClient.getSession();
         if (!session.data?.user) {
+          toast.dismiss(loadingToast);
+          toast.error("Authentication required", {
+            description: "Please sign in to access the dashboard"
+          });
           router.push("/signin");
           return;
         }
@@ -49,14 +59,34 @@ export default function DashboardPage() {
         setHasPermission(permissionData.hasPermission);
         
         if (!permissionData.hasPermission) {
+          toast.dismiss(loadingToast);
+          toast.error("Access denied", {
+            description: "You don't have permission to access the dashboard"
+          });
           router.push('/saved-properties');
           return;
         }
         
+        // Update loading toast
+        toast.dismiss(loadingToast);
+        const statsToast = toast.loading("Loading dashboard statistics...", {
+          description: "Fetching property data from database"
+        });
+        
         // User is authenticated and has permission, fetch dashboard stats
         await fetchDashboardStats();
+        
+        toast.dismiss(statsToast);
+        toast.success("Dashboard loaded successfully!", {
+          description: "All data has been loaded and is ready to explore",
+          duration: 3000
+        });
       } catch (error) {
         console.error("Auth error:", error);
+        toast.dismiss(loadingToast);
+        toast.error("Failed to load dashboard", {
+          description: "An error occurred while loading the dashboard"
+        });
         router.push("/signin");
       } finally {
         setLoading(false);
@@ -77,6 +107,9 @@ export default function DashboardPage() {
       setStats(data);
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
+      toast.error("Failed to load statistics", {
+        description: "Using fallback data. Please refresh to try again."
+      });
       // Fallback to show error state or default values
       setStats({
         totalProperties: "0",
@@ -93,11 +126,21 @@ export default function DashboardPage() {
 
   const handlePropertySelect = (property: PropertyLocation) => {
     setSelectedProperty(property);
+    toast.success("Property selected", {
+      description: `${property.address} - ${property.formattedValue}`,
+      duration: 2000
+    });
     console.log("Selected property:", property);
   };
 
   const handlePropertiesChange = (properties: PropertyLocation[]) => {
     setTotalPropertiesOnMap(properties.length);
+    if (properties.length > 0) {
+      toast.info(`Map updated`, {
+        description: `Showing ${properties.length} properties in current view`,
+        duration: 2000
+      });
+    }
     console.log("Properties on map:", properties.length);
   };
 
@@ -211,4 +254,4 @@ export default function DashboardPage() {
       </div>
     </DashboardLayout>
   );
-} 
+}

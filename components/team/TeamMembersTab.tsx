@@ -52,7 +52,7 @@ interface TeamMembersTabProps {
   onInvite?: () => void;
 }
 
-export function TeamMembersTab({ onStatsUpdate, onInvite }: TeamMembersTabProps) {
+export function TeamMembersTab({ onInvite }: TeamMembersTabProps) {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');

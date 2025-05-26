@@ -16,18 +16,10 @@ import {
   FileText,
   Building2,
   Briefcase,
-  ExternalLink,
+ 
   Copy,
   CheckCircle,
-  BarChart3,
-  PieChart,
-  Activity,
-  Shield,
-  Droplets,
-  Zap,
-  AlertTriangle,
-  Target,
-  TrendingDown
+
 } from "lucide-react";
 import { 
   calculatePropertyValuation, 
