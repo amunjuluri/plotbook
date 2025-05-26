@@ -4,6 +4,137 @@ import { v4 as uuidv4 } from "uuid";
 
 const prisma = new PrismaClient();
 
+// Company data
+const COMPANIES = [
+  {
+    name: 'Luri Labs',
+    domain: 'lurilabs.com',
+    industry: 'Technology',
+    size: 'Small (1-50 employees)',
+    logo: null
+  },
+  {
+    name: 'PropTech Solutions',
+    domain: 'proptech.com',
+    industry: 'Real Estate Technology',
+    size: 'Medium (51-200 employees)',
+    logo: null
+  },
+  {
+    name: 'Urban Analytics',
+    domain: 'urbananalytics.com',
+    industry: 'Data Analytics',
+    size: 'Small (1-50 employees)',
+    logo: null
+  }
+];
+
+// Team members data with Better Auth compatible structure
+const TEAM_MEMBERS = [
+  {
+    name: 'Anand Munjuluri',
+    email: 'anand@lurilabs.com',
+    role: 'admin',
+    emailVerified: true,
+    image: null,
+    companyName: 'Luri Labs',
+    password: 'password123'
+  },
+  {
+    name: 'Sarah Chen',
+    email: 'sarah@lurilabs.com',
+    role: 'manager',
+    emailVerified: true,
+    image: null,
+    companyName: 'Luri Labs',
+    password: 'password123'
+  },
+  {
+    name: 'Michael Rodriguez',
+    email: 'michael@lurilabs.com',
+    role: 'engineer',
+    emailVerified: true,
+    image: null,
+    companyName: 'Luri Labs',
+    password: 'password123'
+  },
+  {
+    name: 'Emily Johnson',
+    email: 'emily@lurilabs.com',
+    role: 'designer',
+    emailVerified: true,
+    image: null,
+    companyName: 'Luri Labs',
+    password: 'password123'
+  },
+  {
+    name: 'David Park',
+    email: 'david@lurilabs.com',
+    role: 'analyst',
+    emailVerified: true,
+    image: null,
+    companyName: 'Luri Labs',
+    password: 'password123'
+  },
+  {
+    name: 'Jessica Williams',
+    email: 'jessica@lurilabs.com',
+    role: 'user',
+    emailVerified: false,
+    image: null,
+    companyName: 'Luri Labs',
+    password: 'password123'
+  },
+  // PropTech Solutions team
+  {
+    name: 'Robert Thompson',
+    email: 'robert@proptech.com',
+    role: 'admin',
+    emailVerified: true,
+    image: null,
+    companyName: 'PropTech Solutions',
+    password: 'password123'
+  },
+  {
+    name: 'Lisa Anderson',
+    email: 'lisa@proptech.com',
+    role: 'manager',
+    emailVerified: true,
+    image: null,
+    companyName: 'PropTech Solutions',
+    password: 'password123'
+  },
+  // Urban Analytics team
+  {
+    name: 'James Wilson',
+    email: 'james@urbananalytics.com',
+    role: 'admin',
+    emailVerified: true,
+    image: null,
+    companyName: 'Urban Analytics',
+    password: 'password123'
+  }
+];
+
+// Sample invitations
+const SAMPLE_INVITATIONS = [
+  {
+    email: 'alex@lurilabs.com',
+    invitedByEmail: 'anand@lurilabs.com',
+    status: 'pending'
+  },
+  {
+    email: 'maria@lurilabs.com',
+    invitedByEmail: 'anand@lurilabs.com',
+    status: 'pending'
+  },
+  {
+    email: 'john@proptech.com',
+    invitedByEmail: 'robert@proptech.com',
+    status: 'expired'
+  }
+];
+
 // US States data with regions
 const US_STATES = [
   // Northeast
@@ -211,418 +342,454 @@ function randomChoice<T>(array: T[]): T {
 }
 
 function generateRandomCoordinates(city: any): { lat: number; lng: number } {
-  // Generate coordinates within ~10 miles of city center
-  const latOffset = (Math.random() - 0.5) * 0.3; // ~10 miles
-  const lngOffset = (Math.random() - 0.5) * 0.3;
+  // Generate coordinates within ~5 miles of the city center
+  const latOffset = (Math.random() - 0.5) * 0.1; // ~5 miles
+  const lngOffset = (Math.random() - 0.5) * 0.1;
+  
+  // Ensure we have valid base coordinates
+  const baseLat = typeof city.lat === 'number' ? city.lat : (typeof city.latitude === 'number' ? city.latitude : 40.7128);
+  const baseLng = typeof city.lng === 'number' ? city.lng : (typeof city.longitude === 'number' ? city.longitude : -74.0060);
   
   return {
-    lat: parseFloat((city.latitude + latOffset).toFixed(6)),
-    lng: parseFloat((city.longitude + lngOffset).toFixed(6))
+    lat: parseFloat((baseLat + latOffset).toFixed(6)),
+    lng: parseFloat((baseLng + lngOffset).toFixed(6))
   };
 }
 
 async function main() {
-  console.log('🌱 Starting database seed...');
+  console.log('🌱 Starting database seeding...');
 
   try {
-    // Clear existing data
-    console.log('🧹 Clearing existing data...');
-    await prisma.wealthBreakdown.deleteMany();
-    await prisma.propertyTransaction.deleteMany();
-    await prisma.propertyOwnership.deleteMany();
+    // Get Better Auth context for password hashing
+    const ctx = await auth.$context;
+
+    // Clear existing data in correct order to avoid foreign key constraints
+    console.log('🧹 Cleaning existing data...');
+    
     await prisma.savedProperty.deleteMany();
+    await prisma.savedSearchFilter.deleteMany();
+    await prisma.report.deleteMany();
+    await prisma.wealthBreakdown.deleteMany();
+    await prisma.propertyOwnership.deleteMany();
+    await prisma.propertyTransaction.deleteMany();
     await prisma.property.deleteMany();
     await prisma.owner.deleteMany();
     await prisma.city.deleteMany();
     await prisma.county.deleteMany();
     await prisma.state.deleteMany();
+    await prisma.invitation.deleteMany();
+    await prisma.session.deleteMany();
+    await prisma.account.deleteMany();
+    await prisma.user.deleteMany();
+    await prisma.company.deleteMany();
+    await prisma.verification.deleteMany();
+    await prisma.dataSource.deleteMany();
 
-    // 1. Create States
-    console.log('🏛️ Creating states...');
-    const stateRecords = await Promise.all(
-      US_STATES.map(state =>
-        prisma.state.create({
+    // 1. Create companies
+    console.log('🏢 Creating companies...');
+    const companies = await Promise.all(
+      COMPANIES.map(async (companyData) => {
+        return await prisma.company.create({
           data: {
-            name: state.name,
-            code: state.code,
-            region: state.region,
-          },
-        })
-      )
-    );
-    console.log(`✅ Created ${stateRecords.length} states`);
-
-    // 2. Create Counties
-    console.log('🏘️ Creating counties...');
-    const countyRecords = [];
-    for (const county of SAMPLE_COUNTIES) {
-      const state = stateRecords.find(s => s.code === county.state);
-      if (state) {
-        const countyRecord = await prisma.county.create({
-          data: {
-            name: county.name,
-            fipsCode: county.fipsCode,
-            stateId: state.id,
-            population: county.population,
-            area: randomFloat(100, 5000),
-            medianIncome: randomFloat(40000, 120000),
-          },
+            id: uuidv4(),
+            name: companyData.name,
+            domain: companyData.domain,
+            industry: companyData.industry,
+            size: companyData.size,
+            logo: companyData.logo,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }
         });
-        countyRecords.push(countyRecord);
-      }
-    }
-    console.log(`✅ Created ${countyRecords.length} counties`);
+      })
+    );
 
-    // 3. Create Cities
-    console.log('🏙️ Creating cities...');
-    const cityRecords = [];
-    for (const city of MAJOR_CITIES) {
-      const state = stateRecords.find(s => s.code === city.state);
-      const county = countyRecords.find(c => c.stateId === state?.id);
-      
-      if (state) {
-        const cityRecord = await prisma.city.create({
+    console.log(`✅ Created ${companies.length} companies`);
+
+    // 2. Create users with Better Auth structure
+    console.log('👥 Creating team members...');
+    const users = await Promise.all(
+      TEAM_MEMBERS.map(async (memberData) => {
+        const company = companies.find(c => c.name === memberData.companyName);
+        if (!company) {
+          throw new Error(`Company ${memberData.companyName} not found`);
+        }
+
+        const userId = uuidv4();
+        const accountId = uuidv4();
+        const now = new Date();
+
+        // Hash the password using Better Auth's password hashing
+        const hashedPassword = await ctx.password.hash(memberData.password);
+
+        // Create user
+        const user = await prisma.user.create({
           data: {
-            name: city.name,
+            id: userId,
+            name: memberData.name,
+            email: memberData.email,
+            emailVerified: memberData.emailVerified,
+            image: memberData.image,
+            role: memberData.role,
+            companyId: company.id,
+            // Tab permissions based on role
+            canAccessDashboard: true, // Everyone can access dashboard
+            canAccessSavedProperties: true, // Everyone can access saved properties
+            canAccessTeamManagement: memberData.role === 'admin' || memberData.role === 'manager', // Only admins and managers
+            createdAt: now,
+            updatedAt: now,
+            banned: false,
+            banExpires: null,
+            banReason: null
+          }
+        });
+
+        // Create account for email/password authentication
+        await prisma.account.create({
+          data: {
+            id: accountId,
+            accountId: "credential",
+            providerId: "credential",
+            userId: userId,
+            password: hashedPassword,
+            createdAt: now,
+            updatedAt: now
+          }
+        });
+
+        return user;
+      })
+    );
+
+    console.log(`✅ Created ${users.length} team members`);
+
+    // 3. Create sample invitations
+    console.log('📧 Creating sample invitations...');
+    const invitations = await Promise.all(
+      SAMPLE_INVITATIONS.map(async (invitationData) => {
+        const invitedBy = users.find(u => u.email === invitationData.invitedByEmail);
+        if (!invitedBy) {
+          throw new Error(`User ${invitationData.invitedByEmail} not found`);
+        }
+
+        const expiresAt = invitationData.status === 'expired' 
+          ? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // 7 days ago
+          : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
+
+        return await prisma.invitation.create({
+          data: {
+            id: uuidv4(),
+            email: invitationData.email,
+            token: uuidv4(),
+            expires: expiresAt,
+            status: invitationData.status,
+            invitedBy: invitedBy.id,
+            createdAt: new Date()
+          }
+        });
+      })
+    );
+
+    console.log(`✅ Created ${invitations.length} invitations`);
+
+    // 4. Create states
+    console.log('🗺️ Creating states...');
+    const states = await Promise.all(
+      US_STATES.map(async (stateData) => {
+        return await prisma.state.create({
+          data: {
+            id: uuidv4(),
+            name: stateData.name,
+            code: stateData.code,
+            region: stateData.region,
+            createdAt: new Date()
+          }
+        });
+      })
+    );
+
+    console.log(`✅ Created ${states.length} states`);
+
+    // 5. Create counties
+    console.log('🏛️ Creating counties...');
+    const counties = await Promise.all(
+      SAMPLE_COUNTIES.map(async (countyData) => {
+        const state = states.find(s => s.code === countyData.state);
+        if (!state) {
+          throw new Error(`State ${countyData.state} not found`);
+        }
+
+        return await prisma.county.create({
+          data: {
+            id: uuidv4(),
+            name: countyData.name,
+            fipsCode: countyData.fipsCode,
+            stateId: state.id,
+            population: countyData.population,
+            createdAt: new Date()
+          }
+        });
+      })
+    );
+
+    console.log(`✅ Created ${counties.length} counties`);
+
+    // 6. Create cities
+    console.log('🏙️ Creating cities...');
+    const cities = await Promise.all(
+      MAJOR_CITIES.map(async (cityData) => {
+        const state = states.find(s => s.code === cityData.state);
+        if (!state) {
+          throw new Error(`State ${cityData.state} not found`);
+        }
+
+        const county = counties.find(c => c.stateId === state.id);
+
+        return await prisma.city.create({
+          data: {
+            id: uuidv4(),
+            name: cityData.name,
             stateId: state.id,
             countyId: county?.id,
-            latitude: city.lat,
-            longitude: city.lng,
-            population: city.population,
-            area: randomFloat(50, 500),
-            medianIncome: randomFloat(45000, 150000),
-            zipCodes: city.zipCodes,
-          },
+            latitude: cityData.lat,
+            longitude: cityData.lng,
+            population: cityData.population,
+            zipCodes: cityData.zipCodes,
+            createdAt: new Date()
+          }
         });
-        cityRecords.push(cityRecord);
-      }
-    }
-    console.log(`✅ Created ${cityRecords.length} cities`);
+      })
+    );
 
-    // 4. Create Owners
-    console.log('👥 Creating property owners...');
-    const ownerRecords = [];
-    
-    // Create individual owners
-    for (let i = 0; i < 500; i++) {
+    console.log(`✅ Created ${cities.length} cities`);
+
+    // 7. Create sample owners
+    console.log('👤 Creating property owners...');
+    const owners = [];
+    for (let i = 0; i < 100; i++) {
       const firstName = randomChoice(FIRST_NAMES);
       const lastName = randomChoice(LAST_NAMES);
-      const netWorth = randomFloat(100000, 50000000);
-      
+      const isCompany = Math.random() < 0.2; // 20% chance of being a company
+
       const owner = await prisma.owner.create({
         data: {
-          type: 'individual',
-          firstName,
-          lastName,
-          dateOfBirth: new Date(randomInt(1940, 1990), randomInt(0, 11), randomInt(1, 28)),
-          email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@email.com`,
-          phone: `+1${randomInt(2000000000, 9999999999)}`,
-          estimatedNetWorth: netWorth,
+          id: uuidv4(),
+          type: isCompany ? 'entity' : 'individual',
+          firstName: isCompany ? null : firstName,
+          lastName: isCompany ? null : lastName,
+          entityName: isCompany ? randomChoice(COMPANY_NAMES) : null,
+          entityType: isCompany ? randomChoice(['corporation', 'llc', 'partnership', 'trust']) : null,
+          email: isCompany ? null : `${firstName.toLowerCase()}.${lastName.toLowerCase()}@email.com`,
+          phone: Math.random() < 0.7 ? `(${randomInt(200, 999)}) ${randomInt(200, 999)}-${randomInt(1000, 9999)}` : null,
+          mailingAddress: `${randomInt(100, 9999)} ${randomChoice(['Main', 'Oak', 'Pine', 'Elm', 'Cedar'])} ${randomChoice(['St', 'Ave', 'Blvd', 'Dr'])}`,
+          dateOfBirth: isCompany ? null : new Date(randomInt(1950, 2000), randomInt(0, 11), randomInt(1, 28)),
+          ssn: isCompany ? null : `***-**-${randomInt(1000, 9999)}`,
+          ein: isCompany ? `${randomInt(10, 99)}-${randomInt(1000000, 9999999)}` : null,
+          estimatedNetWorth: randomFloat(100000, 50000000),
           wealthConfidence: randomFloat(0.6, 0.95),
           wealthLastUpdated: new Date(),
-          wealthSources: ['wealth_engine', 'public_records'],
-          occupation: randomChoice(['Engineer', 'Doctor', 'Lawyer', 'Business Owner', 'Executive', 'Consultant']),
+          wealthSources: ['mock_data'],
+          occupation: isCompany ? null : randomChoice(['Engineer', 'Doctor', 'Lawyer', 'Business Owner', 'Executive', 'Consultant']),
           industry: randomChoice(['Technology', 'Healthcare', 'Finance', 'Real Estate', 'Manufacturing']),
           dataSource: 'mock_data',
           isVerified: Math.random() > 0.3,
-        },
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
       });
-      ownerRecords.push(owner);
-    }
 
-    // Create entity owners
-    for (let i = 0; i < 100; i++) {
-      const entityName = randomChoice(COMPANY_NAMES);
-      const netWorth = randomFloat(1000000, 500000000);
-      
-      const owner = await prisma.owner.create({
-        data: {
-          type: 'entity',
-          entityName,
-          entityType: randomChoice(['corporation', 'llc', 'partnership', 'trust']),
-          ein: `${randomInt(10, 99)}-${randomInt(1000000, 9999999)}`,
-          email: `contact@${entityName.toLowerCase().replace(/\s+/g, '')}.com`,
-          estimatedNetWorth: netWorth,
-          wealthConfidence: randomFloat(0.7, 0.9),
-          wealthLastUpdated: new Date(),
-          wealthSources: ['pitchbook', 'sec_filings'],
-          industry: randomChoice(['Real Estate', 'Investment', 'Development', 'Holdings']),
-          dataSource: 'mock_data',
-          isVerified: Math.random() > 0.2,
-        },
-      });
-      ownerRecords.push(owner);
-    }
-    console.log(`✅ Created ${ownerRecords.length} owners`);
+      owners.push(owner);
 
-    // 5. Create Wealth Breakdowns
-    console.log('💰 Creating wealth breakdowns...');
-    let wealthBreakdownCount = 0;
-    for (const owner of ownerRecords) {
-      if (owner.estimatedNetWorth && owner.estimatedNetWorth > 0) {
-        const categories = WEALTH_CATEGORIES.slice(0, randomInt(3, 6));
-        let remainingPercentage = 100;
+      // Create wealth breakdown for some owners
+      if (Math.random() < 0.6) { // 60% chance
+        const totalWealth = owner.estimatedNetWorth || 1000000;
+        const categories = randomChoice([2, 3, 4, 5]); // Random number of categories
+        const selectedCategories = WEALTH_CATEGORIES.sort(() => 0.5 - Math.random()).slice(0, categories);
         
-        for (let i = 0; i < categories.length; i++) {
-          const category = categories[i];
-          const percentage = i === categories.length - 1 
-            ? remainingPercentage 
-            : randomFloat(10, remainingPercentage - (categories.length - i - 1) * 5);
-          
-          const amount = (owner.estimatedNetWorth * percentage) / 100;
+        let remainingWealth = totalWealth;
+        for (let j = 0; j < selectedCategories.length; j++) {
+          const isLast = j === selectedCategories.length - 1;
+          const amount = isLast ? remainingWealth : randomFloat(0.1, 0.4) * remainingWealth;
           
           await prisma.wealthBreakdown.create({
             data: {
+              id: uuidv4(),
               ownerId: owner.id,
-              category,
-              amount,
-              percentage,
+              category: selectedCategories[j],
+              amount: amount,
+              percentage: (amount / totalWealth) * 100,
               confidence: randomFloat(0.6, 0.9),
               lastUpdated: new Date(),
-              dataSource: 'wealth_engine',
-            },
+              dataSource: 'mock_data'
+            }
           });
           
-          remainingPercentage -= percentage;
-          wealthBreakdownCount++;
+          remainingWealth -= amount;
         }
       }
     }
-    console.log(`✅ Created ${wealthBreakdownCount} wealth breakdowns`);
 
-    // 6. Create Properties
+    console.log(`✅ Created ${owners.length} property owners`);
+
+    // 8. Create properties
     console.log('🏠 Creating properties...');
-    const propertyRecords = [];
-    
-    for (const city of cityRecords) {
-      const propertiesInCity = randomInt(50, 200);
+    const properties = [];
+    for (let i = 0; i < 500; i++) {
+      const city = randomChoice(cities);
+      const state = states.find(s => s.id === city.stateId);
+      const county = counties.find(c => c.stateId === state?.id);
+      const coords = generateRandomCoordinates(city);
+      const propertyType = randomChoice(PROPERTY_TYPES);
+      const buildingType = randomChoice(BUILDING_TYPES);
       
-      for (let i = 0; i < propertiesInCity; i++) {
-        const coords = generateRandomCoordinates(city);
-        const propertyType = randomChoice(PROPERTY_TYPES);
-        const buildingType = randomChoice(BUILDING_TYPES);
-        const currentValue = randomFloat(100000, 5000000);
-        
-        const property = await prisma.property.create({
-          data: {
-            address: `${randomInt(100, 9999)} ${randomChoice(['Main', 'Oak', 'Pine', 'Elm', 'Maple'])} ${randomChoice(['St', 'Ave', 'Blvd', 'Dr', 'Ln'])}`,
-            streetNumber: randomInt(100, 9999).toString(),
-            streetName: `${randomChoice(['Main', 'Oak', 'Pine', 'Elm', 'Maple'])} ${randomChoice(['St', 'Ave', 'Blvd', 'Dr', 'Ln'])}`,
-            zipCode: randomChoice(city.zipCodes),
-            latitude: coords.lat,
-            longitude: coords.lng,
-            propertyType,
-            buildingType,
-            yearBuilt: propertyType === 'land' ? null : randomInt(1950, 2023),
-            squareFootage: propertyType === 'land' ? null : randomInt(800, 5000),
-            lotSize: randomFloat(0.1, 2.0),
-            bedrooms: propertyType === 'residential' ? randomInt(1, 6) : null,
-            bathrooms: propertyType === 'residential' ? randomFloat(1, 4) : null,
-            stories: propertyType === 'residential' ? randomInt(1, 3) : null,
-            currentValue,
-            assessedValue: currentValue * randomFloat(0.8, 1.2),
-            taxAmount: currentValue * randomFloat(0.01, 0.03),
-            lastSalePrice: currentValue * randomFloat(0.7, 1.1),
-            lastSaleDate: new Date(randomInt(2015, 2023), randomInt(0, 11), randomInt(1, 28)),
-            stateId: city.stateId,
-            countyId: city.countyId,
-            cityId: city.id,
-            dataSource: randomChoice(['zillow', 'county_records', 'mls']),
-            confidence: randomFloat(0.8, 0.98),
-          },
-        });
-        propertyRecords.push(property);
-      }
-    }
-    console.log(`✅ Created ${propertyRecords.length} properties`);
+      const property = await prisma.property.create({
+        data: {
+          id: uuidv4(),
+          address: `${randomInt(100, 9999)} ${randomChoice(['Main', 'Oak', 'Pine', 'Elm', 'Cedar', 'Maple', 'Washington', 'Lincoln'])} ${randomChoice(['St', 'Ave', 'Blvd', 'Dr', 'Ln', 'Ct'])}`,
+          streetNumber: randomInt(100, 9999).toString(),
+          streetName: `${randomChoice(['Main', 'Oak', 'Pine', 'Elm', 'Cedar'])} ${randomChoice(['St', 'Ave', 'Blvd', 'Dr'])}`,
+          unit: Math.random() < 0.2 ? `Unit ${randomInt(1, 50)}` : null,
+          zipCode: randomChoice(city.zipCodes),
+          latitude: coords.lat,
+          longitude: coords.lng,
+          propertyType: propertyType,
+          buildingType: buildingType,
+          yearBuilt: propertyType !== 'land' ? randomInt(1950, 2023) : null,
+          squareFootage: propertyType !== 'land' ? randomInt(800, 5000) : null,
+          lotSize: randomFloat(0.1, 2.0),
+          bedrooms: propertyType === 'residential' ? randomInt(1, 6) : null,
+          bathrooms: propertyType === 'residential' ? randomFloat(1, 4) : null,
+          stories: propertyType === 'residential' ? randomInt(1, 3) : null,
+          currentValue: randomFloat(200000, 2000000),
+          assessedValue: randomFloat(180000, 1800000),
+          taxAmount: randomFloat(2000, 25000),
+          lastSalePrice: Math.random() < 0.8 ? randomFloat(150000, 1900000) : null,
+          lastSaleDate: Math.random() < 0.8 ? new Date(randomInt(2015, 2023), randomInt(0, 11), randomInt(1, 28)) : null,
+          stateId: state!.id,
+          countyId: county?.id,
+          cityId: city.id,
+          dataSource: randomChoice(['zillow', 'county_records', 'mls']),
+          confidence: randomFloat(0.8, 0.98),
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      });
 
-    // 7. Create Property Ownerships
-    console.log('🔗 Creating property ownerships...');
-    let ownershipCount = 0;
-    for (const property of propertyRecords) {
-      const numOwners = Math.random() > 0.8 ? 2 : 1; // 20% chance of joint ownership
-      const selectedOwners: string[] = [];
-      
-      for (let i = 0; i < numOwners; i++) {
-        let owner;
-        do {
-          owner = randomChoice(ownerRecords);
-        } while (selectedOwners.includes(owner.id));
-        selectedOwners.push(owner.id);
-        
-        const ownershipPercent = numOwners === 1 ? 100 : (i === 0 ? randomFloat(50, 80) : 100 - selectedOwners.length + 1);
-        
-        await prisma.propertyOwnership.create({
-          data: {
-            propertyId: property.id,
-            ownerId: owner.id,
-            ownershipType: randomChoice(OWNERSHIP_TYPES),
-            ownershipPercent,
-            startDate: property.lastSaleDate || new Date(randomInt(2010, 2023), randomInt(0, 11), randomInt(1, 28)),
-            isActive: true,
-          },
-        });
-        ownershipCount++;
-      }
-    }
-    console.log(`✅ Created ${ownershipCount} property ownerships`);
+      properties.push(property);
 
-    // 8. Create Property Transactions
-    console.log('💸 Creating property transactions...');
-    let transactionCount = 0;
-    for (const property of propertyRecords.slice(0, 1000)) { // Limit to first 1000 for performance
-      const numTransactions = randomInt(1, 4);
+      // Create property ownership
+      const owner = randomChoice(owners);
+      const ownershipType = randomChoice(OWNERSHIP_TYPES);
       
-      for (let i = 0; i < numTransactions; i++) {
-        const transactionDate = new Date(
-          randomInt(2015, 2023),
-          randomInt(0, 11),
-          randomInt(1, 28)
-        );
-        
-        const buyer = randomChoice(ownerRecords);
-        const seller = randomChoice(ownerRecords);
-        
-        if (buyer.id !== seller.id) {
+      await prisma.propertyOwnership.create({
+        data: {
+          id: uuidv4(),
+          propertyId: property.id,
+          ownerId: owner.id,
+          ownershipType: ownershipType,
+          ownershipPercent: ownershipType === 'joint' ? randomFloat(25, 75) : 100,
+          startDate: new Date(randomInt(2010, 2023), randomInt(0, 11), randomInt(1, 28)),
+          endDate: null,
+          isActive: true,
+          createdAt: new Date()
+        }
+      });
+
+      // Create property transactions (some properties)
+      if (Math.random() < 0.7) { // 70% of properties have transactions
+        const transactionCount = randomInt(1, 3);
+        for (let j = 0; j < transactionCount; j++) {
           await prisma.propertyTransaction.create({
             data: {
+              id: uuidv4(),
               propertyId: property.id,
               transactionType: randomChoice(['sale', 'purchase', 'refinance']),
-              amount: randomFloat(property.currentValue! * 0.7, property.currentValue! * 1.3),
-              date: transactionDate,
-              buyerId: buyer.id,
-              sellerId: seller.id,
+              amount: randomFloat(150000, 1900000),
+              date: new Date(randomInt(2015, 2023), randomInt(0, 11), randomInt(1, 28)),
+              buyerId: Math.random() < 0.5 ? randomChoice(owners).id : null,
+              sellerId: Math.random() < 0.5 ? randomChoice(owners).id : null,
               documentType: randomChoice(['deed', 'mortgage', 'lien']),
-              recordingDate: new Date(transactionDate.getTime() + randomInt(1, 30) * 24 * 60 * 60 * 1000),
-            },
+              recordingDate: new Date(randomInt(2015, 2023), randomInt(0, 11), randomInt(1, 28)),
+              createdAt: new Date()
+            }
           });
-          transactionCount++;
         }
       }
     }
-    console.log(`✅ Created ${transactionCount} property transactions`);
 
-    // 9. Create Data Sources
-    console.log('🔌 Creating data sources...');
+    console.log(`✅ Created ${properties.length} properties`);
+
+    // 9. Create saved properties for users
+    console.log('💾 Creating saved properties...');
+    const luriLabsUsers = users.filter(u => u.email.includes('lurilabs.com'));
+    for (const user of luriLabsUsers) {
+      const savedCount = randomInt(3, 15);
+      const selectedProperties = properties.sort(() => 0.5 - Math.random()).slice(0, savedCount);
+      
+      for (const property of selectedProperties) {
+        await prisma.savedProperty.create({
+          data: {
+            id: uuidv4(),
+            userId: user.id,
+            propertyId: property.id,
+            notes: Math.random() < 0.5 ? `Interesting property in ${property.address}` : null,
+            tags: Math.random() < 0.3 ? ['investment', 'potential'] : [],
+            createdAt: new Date()
+          }
+        });
+      }
+    }
+
+    console.log('✅ Created saved properties for users');
+
+    // 10. Create data sources
+    console.log('📊 Creating data sources...');
     const dataSources = [
-      {
-        name: 'Zillow API',
-        type: 'api',
-        url: 'https://api.zillow.com',
-        isActive: true,
-        rateLimit: 1000,
-      },
-      {
-        name: 'Here.com Maps',
-        type: 'api', 
-        url: 'https://api.here.com',
-        isActive: true,
-        rateLimit: 2000,
-      },
-      {
-        name: 'PitchBook',
-        type: 'api',
-        url: 'https://api.pitchbook.com',
-        isActive: true,
-        rateLimit: 500,
-      },
-      {
-        name: 'Wealth Engine',
-        type: 'api',
-        url: 'https://api.wealthengine.com',
-        isActive: true,
-        rateLimit: 300,
-      },
-      {
-        name: 'ReportAll.com',
-        type: 'api',
-        url: 'https://api.reportall.com',
-        isActive: true,
-        rateLimit: 800,
-      },
-      {
-        name: 'ZoomInfo',
-        type: 'api',
-        url: 'https://api.zoominfo.com',
-        isActive: true,
-        rateLimit: 1200,
-      },
-      {
-        name: 'Fast People Search',
-        type: 'api',
-        url: 'https://api.fastpeoplesearch.com',
-        isActive: true,
-        rateLimit: 600,
-      },
-      {
-        name: 'County Records',
-        type: 'file',
-        url: null,
-        isActive: true,
-        rateLimit: null,
-      },
-      {
-        name: 'MLS Data',
-        type: 'file',
-        url: null,
-        isActive: true,
-        rateLimit: null,
-      },
-      {
-        name: 'SEC Filings',
-        type: 'api',
-        url: 'https://api.sec.gov',
-        isActive: true,
-        rateLimit: 100,
-      },
-      {
-        name: 'Public Records',
-        type: 'file',
-        url: null,
-        isActive: true,
-        rateLimit: null,
-      },
-      {
-        name: 'Mock Data Generator',
-        type: 'manual',
-        url: null,
-        isActive: true,
-        rateLimit: null,
-      },
+      { name: 'County Assessor Records', type: 'api', url: 'https://countyassessor.com' },
+      { name: 'MLS Database', type: 'api', url: 'https://mls.com' },
+      { name: 'Public Records', type: 'file', url: null },
+      { name: 'Census Bureau', type: 'api', url: 'https://census.gov' }
     ];
 
-    let dataSourceCount = 0;
-    for (const source of dataSources) {
+    for (const sourceData of dataSources) {
       await prisma.dataSource.create({
         data: {
-          name: source.name,
-          type: source.type,
-          url: source.url,
-          isActive: source.isActive,
-          rateLimit: source.rateLimit,
-          lastSync: new Date(randomInt(2023, 2024), randomInt(0, 11), randomInt(1, 28)),
-        },
+          id: uuidv4(),
+          name: sourceData.name,
+          type: sourceData.type,
+          url: sourceData.url,
+          lastSync: new Date(),
+          isActive: true,
+          rateLimit: sourceData.type === 'api' ? randomInt(100, 1000) : null,
+          createdAt: new Date()
+        }
       });
-      dataSourceCount++;
     }
-    console.log(`✅ Created ${dataSourceCount} data sources`);
+
+    console.log('✅ Created data sources');
 
     console.log('🎉 Database seeding completed successfully!');
-    console.log(`
-📊 Summary:
-- States: ${stateRecords.length}
-- Counties: ${countyRecords.length}
-- Cities: ${cityRecords.length}
-- Owners: ${ownerRecords.length}
-- Properties: ${propertyRecords.length}
-- Ownerships: ${ownershipCount}
-- Transactions: ${transactionCount}
-- Wealth Breakdowns: ${wealthBreakdownCount}
-- Data Sources: ${dataSourceCount}
-    `);
+    console.log('\n📊 Summary:');
+    console.log(`- Companies: ${companies.length}`);
+    console.log(`- Team Members: ${users.length}`);
+    console.log(`- Invitations: ${invitations.length}`);
+    console.log(`- States: ${states.length}`);
+    console.log(`- Counties: ${counties.length}`);
+    console.log(`- Cities: ${cities.length}`);
+    console.log(`- Property Owners: ${owners.length}`);
+    console.log(`- Properties: ${properties.length}`);
+    console.log(`- Data Sources: ${dataSources.length}`);
+    
+    console.log('\n🔐 Default Login Credentials:');
+    console.log('Admin User: anand@lurilabs.com / password123');
+    console.log('Manager User: sarah@lurilabs.com / password123');
+    console.log('Engineer User: michael@lurilabs.com / password123');
+    console.log('Designer User: emily@lurilabs.com / password123');
+    console.log('Analyst User: david@lurilabs.com / password123');
+    console.log('Basic User: jessica@lurilabs.com / password123');
 
   } catch (error) {
-    console.error('❌ Error seeding database:', error);
+    console.error('❌ Error during seeding:', error);
     throw error;
   } finally {
     await prisma.$disconnect();
@@ -631,6 +798,6 @@ async function main() {
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error('❌ Seeding failed:', e);
     process.exit(1);
   });

@@ -4,6 +4,7 @@ import React, { ReactNode, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
+import { useUser } from "@/hooks/useUser";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -15,8 +16,7 @@ import {
   ChevronRight,
   Home,
   Heart,
-  Map,
-  User
+  Shield
 } from "lucide-react";
 import { Button } from '@/components/ui/button';
 
@@ -36,6 +36,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { user, isAdmin } = useUser();
 
   const handleLogout = async () => {
     try {
@@ -51,41 +52,31 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   const navigationItems: NavigationItem[] = [
-    {
-      name: "Map Search",
-      href: "/",
-      icon: Map,
-      description: "Search and explore properties",
-      active: pathname === "/"
-    },
-    {
-      name: "Saved Properties",
-      href: "/saved-properties",
-      icon: Heart,
-      description: "View your saved properties",
-      active: pathname === "/saved-properties"
-    },
-    {
+    ...(user?.canAccessDashboard ? [{
       name: "Dashboard",
       href: "/dashboard",
       icon: Home,
       description: "Overview and analytics",
       active: pathname === "/dashboard"
-    },
-    {
-      name: "Profile",
-      href: "/profile",
-      icon: User,
-      description: "Manage your account",
-      active: pathname === "/profile"
-    }
+    }] : []),
+    ...(user?.canAccessSavedProperties ? [{
+      name: "Saved Properties",
+      href: "/saved-properties",
+      icon: Heart,
+      description: "View your saved properties",
+      active: pathname === "/saved-properties"
+    }] : []),
+    ...(user?.canAccessTeamManagement ? [{
+      name: "My Team",
+      href: "/team",
+      icon: Shield,
+      description: "Manage team and permissions",
+      active: pathname === "/team"
+    }] : [])
   ];
 
   const isActive = (href: string) => {
-    if (href === "/") {
-      return pathname === "/";
-    }
-    return pathname.startsWith(href);
+    return pathname === href || pathname.startsWith(href + '/');
   };
 
   return (

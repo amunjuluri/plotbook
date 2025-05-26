@@ -10,11 +10,20 @@ export const auth = betterAuth({
     provider: "postgresql",
   }),
 
-  // Ensure the user role is included in the session
+  // Ensure the user role and tab permissions are included in the session
   user: {
     additionalFields: {
       role: {
         type: "string"
+      },
+      canAccessDashboard: {
+        type: "boolean"
+      },
+      canAccessSavedProperties: {
+        type: "boolean"
+      },
+      canAccessTeamManagement: {
+        type: "boolean"
       }
     }
   },

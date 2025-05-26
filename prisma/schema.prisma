@@ -24,6 +24,11 @@ model User {
   role          String?
   companyId     String?
   
+  // Tab Permissions
+  canAccessDashboard      Boolean @default(true)
+  canAccessSavedProperties Boolean @default(true)
+  canAccessTeamManagement Boolean @default(false)
+  
   // Relations
   accounts      Account[]
   sessions      Session[]

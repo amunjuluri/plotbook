@@ -2,30 +2,18 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   X, 
   MapPin, 
   Building, 
-  DollarSign, 
   Calendar, 
-  User, 
   Users, 
-  TrendingUp, 
-  Home, 
   Bed, 
   Bath, 
   Square, 
-  Ruler, 
-  Phone, 
-  Mail, 
-  MapIcon,
-  Clock,
   FileText,
-  ArrowUpDown,
   Building2,
   Briefcase,
   ExternalLink,

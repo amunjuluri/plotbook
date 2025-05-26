@@ -42,6 +42,10 @@
   --card: #ffffff;
   --card-foreground: #0f172a;
   
+  /* Popover colors for dropdowns */
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  
   /* Border and input */
   --border: #e2e8f0;
   --input: #f1f5f9;
@@ -49,6 +53,17 @@
   /* Muted colors */
   --muted: #f8fafc;
   --muted-foreground: #64748b;
+  
+  /* Accent colors for hover states */
+  --accent: #f1f5f9;
+  --accent-foreground: #0f172a;
+  
+  /* Ring colors for focus states */
+  --ring: #3b82f6;
+  
+  /* Destructive colors */
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
 }
 
 /* Cal Sans utility classes */
