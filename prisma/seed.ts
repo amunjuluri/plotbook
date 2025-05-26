@@ -1,6 +1,7 @@
 import { PrismaClient } from "@/generated/prisma";
 import { auth } from "@/lib/auth";
 import { v4 as uuidv4 } from "uuid";
+import crypto from "crypto";
 
 const prisma = new PrismaClient();
 
@@ -471,6 +472,9 @@ async function main() {
         if (!invitedBy) {
           throw new Error(`User ${invitationData.invitedByEmail} not found`);
         }
+        if (!invitedBy.companyId) {
+          throw new Error(`User ${invitationData.invitedByEmail} has no companyId`);
+        }
 
         const expiresAt = invitationData.status === 'expired' 
           ? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // 7 days ago
@@ -480,10 +484,11 @@ async function main() {
           data: {
             id: uuidv4(),
             email: invitationData.email,
-            token: uuidv4(),
+            token: crypto.randomBytes(32).toString('hex'),
             expires: expiresAt,
             status: invitationData.status,
             invitedBy: invitedBy.id,
+            companyId: invitedBy.companyId, // Add company ID from the inviter
             createdAt: new Date()
           }
         });

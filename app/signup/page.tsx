@@ -72,29 +72,50 @@ function SignUpForm() {
     }
 
     try {
-      // If user doesn't exist, proceed with signup
+      console.log("!!! PLOTBOOK_CLIENT_DEBUG: Starting signup process !!!");
       const signupResult = await authClient.signUp.email({
         email,
         password,
         name,
       });
+      console.log(`!!! PLOTBOOK_CLIENT_DEBUG: authClient.signUp.email result: ${JSON.stringify(signupResult)} !!!`);
 
       if (signupResult.error) {
-        throw new Error(signupResult.error.message || "Failed to create account");
+        console.error(`!!! PLOTBOOK_CLIENT_DEBUG: Better Auth signUp.email error: ${signupResult.error.message} !!!`);
+        throw new Error(signupResult.error.message || "Failed to create account initially");
       }
 
-      // Mark the invitation as accepted
+      if (!signupResult.data?.user?.id) {
+        console.error("!!! PLOTBOOK_CLIENT_DEBUG: User ID missing from signupResult.data.user !!!");
+        throw new Error("User created, but ID was not returned. Cannot complete invitation signup.");
+      }
+      const userId = signupResult.data.user.id;
+      console.log(`!!! PLOTBOOK_CLIENT_DEBUG: User created by Better Auth with ID: ${userId} !!!`);
+
+      // If there was an invitation token, complete the setup
       if (token) {
-        await fetch('/api/invitations/accept', {
+        console.log(`!!! PLOTBOOK_CLIENT_DEBUG: Invitation token present (${token}), calling /api/user/complete-invitation-signup for userId ${userId} !!!`);
+        const completeResponse = await fetch('/api/user/complete-invitation-signup', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ token }),
+          body: JSON.stringify({ userId, token }),
         });
+        console.log(`!!! PLOTBOOK_CLIENT_DEBUG: /api/user/complete-invitation-signup response status: ${completeResponse.status} !!!`);
+        const completeData = await completeResponse.json();
+        console.log(`!!! PLOTBOOK_CLIENT_DEBUG: /api/user/complete-invitation-signup response data: ${JSON.stringify(completeData)} !!!`);
+
+        if (!completeResponse.ok) {
+          throw new Error(completeData.error || "Failed to complete invitation signup steps.");
+        }
+        console.log("!!! PLOTBOOK_CLIENT_DEBUG: Invitation signup completed successfully via custom API. !!!");
+      } else {
+        console.log("!!! PLOTBOOK_CLIENT_DEBUG: No invitation token present, standard signup. !!!");
+        // For non-invitation signups, we might need to ensure default roles/permissions are set
+        // if Better Auth doesn't do it sufficiently. The new API route could be adapted for this, or use onUserCreate.
       }
       
-      // Success case
       toast.success("Account created successfully! Please sign in.");
       router.push("/signin");
     } catch (err) {

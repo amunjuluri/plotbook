@@ -53,6 +53,7 @@ model Company {
   
   // Relations
   employees   User[]
+  invitations Invitation[]
   
   @@map("company")
 }
@@ -110,7 +111,9 @@ model Invitation {
   createdAt  DateTime  @default(now())
   status     String    @default("pending") // pending, accepted, expired
   invitedBy  String
+  companyId  String?    // Add company ID field
   admin      User      @relation(fields: [invitedBy], references: [id], onDelete: Cascade)
+  company    Company?   @relation(fields: [companyId], references: [id])
 
   @@map("invitation")
 }

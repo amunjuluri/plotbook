@@ -69,6 +69,7 @@ export async function POST(req: NextRequest) {
         token,
         expires: expiryDate,
         invitedBy: session.user.id,
+        companyId: session.user.companyId,
       },
     });
 
