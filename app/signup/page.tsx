@@ -72,27 +72,16 @@ function SignUpForm() {
     }
 
     try {
-      // First, check if user already exists using server-side action
-      const checkUserResponse = await fetch('/api/check-user', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      });
-      
-      const checkUserData = await checkUserResponse.json();
-      
-      if (checkUserData.exists) {
-        throw new Error("user_exists");
-      }
-      
       // If user doesn't exist, proceed with signup
-      await authClient.signUp.email({
+      const signupResult = await authClient.signUp.email({
         email,
         password,
         name,
       });
+
+      if (signupResult.error) {
+        throw new Error(signupResult.error.message || "Failed to create account");
+      }
 
       // Mark the invitation as accepted
       if (token) {
@@ -180,7 +169,7 @@ function SignUpForm() {
         <div className="relative z-10 flex flex-col justify-center w-full p-12 xl:p-20 text-white">
           <div className="max-w-lg">
             <h1 className="text-6xl xl:text-7xl font-bold mb-6">
-              <span style={{ color: '#D2966E' }}>Plot</span>Book
+              <span>plot</span>book
             </h1>
             <p className="text-2xl xl:text-3xl font-light mb-8 leading-relaxed">
               Property intelligence made simple
