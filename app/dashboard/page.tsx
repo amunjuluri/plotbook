@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { OnboardingTutorial } from "@/components/OnboardingTutorial";
+import { OnboardingTrigger } from "@/components/ui/onboarding-trigger";
+import { useOnboarding } from "@/hooks/useOnboarding";
 import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,6 +30,12 @@ export default function DashboardPage() {
   const [selectedProperty, setSelectedProperty] = useState<PropertyLocation | null>(null);
   const [totalPropertiesOnMap, setTotalPropertiesOnMap] = useState(0);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const { showOnboarding, isCompleted, startOnboarding, setShowOnboarding } = useOnboarding();
+  const [userPermissions, setUserPermissions] = useState<{
+    canAccessDashboard?: boolean;
+    canAccessSavedProperties?: boolean;
+    canAccessTeamManagement?: boolean;
+  }>({});
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -45,6 +54,15 @@ export default function DashboardPage() {
           router.push("/signin");
           return;
         }
+        
+        const user = session.data.user as any; // Type assertion for permissions
+        
+        // Set user permissions
+        setUserPermissions({
+          canAccessDashboard: user.canAccessDashboard,
+          canAccessSavedProperties: user.canAccessSavedProperties,
+          canAccessTeamManagement: user.canAccessTeamManagement
+        });
         
         // Check backend permission
         const permissionResponse = await fetch('/api/user/check-permission', {
@@ -81,6 +99,16 @@ export default function DashboardPage() {
           description: "All data has been loaded and is ready to explore",
           duration: 3000
         });
+        
+        // Check if onboarding should be shown (only for first-time users)
+        const onboardingCompleted = localStorage.getItem('plotbook_onboarding_completed');
+        if (!onboardingCompleted || onboardingCompleted !== 'true') {
+          // Show onboarding after a brief delay to let the dashboard load
+          setTimeout(() => {
+            startOnboarding();
+          }, 1500);
+        }
+        
       } catch (error) {
         console.error("Auth error:", error);
         toast.dismiss(loadingToast);
@@ -167,6 +195,19 @@ export default function DashboardPage() {
   return (
     <DashboardLayout>
       <div className="p-6 space-y-6">
+        {/* Header with Help Button */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Dashboard</h1>
+            <p className="text-gray-600 mt-1 text-sm sm:text-base">Welcome back! Here's your property intelligence overview.</p>
+          </div>
+          <OnboardingTrigger 
+            onStartOnboarding={startOnboarding}
+            variant="outline"
+            size="sm"
+          />
+        </div>
+
         {/* Stats Cards Row - Real data from database */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {statsLoading ? (
@@ -252,6 +293,13 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+      
+      {/* Onboarding Tutorial */}
+      <OnboardingTutorial
+        isOpen={showOnboarding}
+        onClose={() => setShowOnboarding(false)}
+        userPermissions={userPermissions}
+      />
     </DashboardLayout>
   );
 }

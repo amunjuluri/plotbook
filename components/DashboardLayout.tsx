@@ -138,10 +138,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <Button variant="ghost" size="sm" className="hidden sm:flex">
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </Button>
+            
               <Button variant="outline" size="sm" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Sign Out

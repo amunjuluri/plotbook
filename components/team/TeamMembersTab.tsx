@@ -217,19 +217,19 @@ export function TeamMembersTab({ onInvite }: TeamMembersTabProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Filters Section */}
       <Card className="border border-gray-200">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
-            <Filter className="h-5 w-5 text-blue-600" />
+        <CardHeader className="pb-3 sm:pb-4 p-4 sm:p-6">
+          <CardTitle className="text-base sm:text-lg font-semibold flex items-center gap-2">
+            <Filter className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
             Search & Filter
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <CardContent className="space-y-4 p-4 sm:p-6 pt-0">
+          <div className="grid grid-cols-1 gap-4">
             {/* Search Input */}
-            <div className="md:col-span-1">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Search Members
               </label>
@@ -244,52 +244,54 @@ export function TeamMembersTab({ onInvite }: TeamMembersTabProps) {
               </div>
             </div>
             
-            {/* Access Level Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Filter by Access Level
-              </label>
-              <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Access Levels" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Access Levels</SelectItem>
-                  <SelectItem value="admin">Full Access (Admin)</SelectItem>
-                  <SelectItem value="manager">Management Access</SelectItem>
-                  <SelectItem value="engineer">Development Access</SelectItem>
-                  <SelectItem value="designer">Design Access</SelectItem>
-                  <SelectItem value="analyst">Analytics Access</SelectItem>
-                  <SelectItem value="user">Basic Access</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Access Level Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Filter by Access Level
+                </label>
+                <Select value={roleFilter} onValueChange={setRoleFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Access Levels" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Access Levels</SelectItem>
+                    <SelectItem value="admin">Full Access (Admin)</SelectItem>
+                    <SelectItem value="manager">Management Access</SelectItem>
+                    <SelectItem value="engineer">Development Access</SelectItem>
+                    <SelectItem value="designer">Design Access</SelectItem>
+                    <SelectItem value="analyst">Analytics Access</SelectItem>
+                    <SelectItem value="user">Basic Access</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            {/* Status Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Filter by Status
-              </label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                </SelectContent>
-              </Select>
+              {/* Status Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Filter by Status
+                </label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 
           {/* Results Summary */}
-          <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-2 border-t border-gray-200 gap-3 sm:gap-0">
             <p className="text-sm text-gray-600">
               Showing {filteredMembers.length} of {members.length} members
             </p>
-            <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={onInvite}>
+            <Button size="sm" className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto" onClick={onInvite}>
               <UserPlus className="h-4 w-4 mr-2" />
               Invite Member
             </Button>
@@ -298,71 +300,72 @@ export function TeamMembersTab({ onInvite }: TeamMembersTabProps) {
       </Card>
 
       {/* Team Members List */}
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         {filteredMembers.length === 0 ? (
           <Card className="border-dashed border-2 border-gray-200">
-            <CardContent className="p-12 text-center">
-              <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <UserPlus className="h-10 w-10 text-gray-400" />
+            <CardContent className="p-8 sm:p-12 text-center">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+                <UserPlus className="h-8 w-8 sm:h-10 sm:w-10 text-gray-400" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">No team members found</h3>
-              <p className="text-gray-600 mb-6 max-w-md mx-auto">
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">No team members found</h3>
+              <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 max-w-md mx-auto">
                 {searchTerm || roleFilter !== 'all' || statusFilter !== 'all' 
                   ? 'Try adjusting your filters to see more results.'
                   : 'Start by inviting team members to join your organization.'
                 }
               </p>
-              <Button className="bg-blue-600 hover:bg-blue-700" onClick={onInvite}>
+              <Button className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto" onClick={onInvite}>
                 <UserPlus className="h-4 w-4 mr-2" />
                 Invite Team Member
               </Button>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4">
+          <div className="grid gap-3 sm:gap-4">
             {filteredMembers.map((member) => {
               const tabPermissions = getTabPermissions(member);
               
               return (
                 <Card key={member.id} className="border border-gray-200">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start space-x-4">
-                        <Avatar className="h-12 w-12">
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                      <div className="flex items-start space-x-3 sm:space-x-4">
+                        <Avatar className="h-10 w-10 sm:h-12 sm:w-12 flex-shrink-0">
                           <AvatarImage src={member.image} alt={member.name} />
-                          <AvatarFallback className="bg-blue-600 text-white font-semibold">
+                          <AvatarFallback className="bg-blue-600 text-white font-semibold text-sm">
                             {member.name.split(' ').map(n => n[0]).join('')}
                           </AvatarFallback>
                         </Avatar>
                         
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="font-semibold text-gray-900">{member.name}</h3>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
+                            <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate">{member.name}</h3>
                             {getStatusBadge(member.status)}
                           </div>
-                          <p className="text-sm text-gray-600 mb-3">{member.email}</p>
+                          <p className="text-xs sm:text-sm text-gray-600 mb-3 truncate">{member.email}</p>
                           
                           {/* Tab Access Permissions */}
-                          <div className="space-y-3">
-                            <p className="text-xs font-medium text-gray-700">Tab Access Permissions:</p>
-                            <div className="space-y-2">
+                          <div className="space-y-2 sm:space-y-3">
+                            <p className="text-xs font-medium text-gray-700">Tab Access:</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                               {tabPermissions.map((tab, index) => {
                                 const IconComponent = tab.icon;
                                 return (
-                                  <div key={index} className="flex items-center space-x-3">
+                                  <div key={index} className="flex items-center space-x-2">
                                     <Checkbox
                                       id={`${member.id}-${tab.permission}`}
                                       checked={tab.enabled}
                                       onCheckedChange={(checked) => 
                                         handleTabPermissionChange(member.id, tab.permission, checked as boolean)
                                       }
+                                      className="flex-shrink-0"
                                     />
                                     <label 
                                       htmlFor={`${member.id}-${tab.permission}`}
-                                      className="flex items-center gap-2 text-sm cursor-pointer"
+                                      className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm cursor-pointer min-w-0"
                                     >
-                                      <IconComponent className={`h-4 w-4 ${tab.color}`} />
-                                      {tab.name}
+                                      <IconComponent className={`h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0 ${tab.color}`} />
+                                      <span className="truncate">{tab.name}</span>
                                     </label>
                                   </div>
                                 );
@@ -370,21 +373,26 @@ export function TeamMembersTab({ onInvite }: TeamMembersTabProps) {
                             </div>
                           </div>
                           
-                          <div className="flex items-center gap-3 mt-4">
+                          <div className="flex flex-wrap items-center gap-2 mt-3 sm:mt-4">
                             <Badge className={`text-xs font-medium border ${getRoleColor(member.role)}`}>
                               <div className="flex items-center gap-1">
                                 {getRoleIcon(member.role)}
-                                {member.role.charAt(0).toUpperCase() + member.role.slice(1)} Access
+                                <span className="hidden xs:inline">{member.role.charAt(0).toUpperCase() + member.role.slice(1)} Access</span>
+                                <span className="xs:hidden">{member.role.charAt(0).toUpperCase() + member.role.slice(1)}</span>
                               </div>
                             </Badge>
                             {member.emailVerified && (
                               <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
                                 <CheckCircle className="h-3 w-3 mr-1" />
-                                Verified
+                                <span className="hidden xs:inline">Verified</span>
+                                <span className="xs:hidden">✓</span>
                               </Badge>
                             )}
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-gray-500 hidden sm:inline">
                               Joined {new Date(member.createdAt).toLocaleDateString()}
+                            </span>
+                            <span className="text-xs text-gray-500 sm:hidden">
+                              {new Date(member.createdAt).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })}
                             </span>
                           </div>
                         </div>
