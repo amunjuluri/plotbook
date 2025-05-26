@@ -54,7 +54,5 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to fetch saved properties' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 } 

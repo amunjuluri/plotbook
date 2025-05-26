@@ -268,7 +268,5 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to fetch property locations' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 } 

@@ -252,7 +252,5 @@ export async function GET(
       { error: 'Failed to fetch property details' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 } 

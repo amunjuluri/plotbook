@@ -78,10 +78,8 @@ export async function PATCH(
   } catch (error) {
     console.error('Error updating member permissions:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to update permissions' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 } 

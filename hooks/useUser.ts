@@ -28,7 +28,26 @@ export function useUser() {
       try {
         const session = await authClient.getSession();
         if (session.data?.user) {
-          setUser(session.data.user as User);
+          // Use session data directly if it has all the fields we need
+          const sessionUser = session.data.user as User;
+          if (sessionUser.canAccessDashboard !== undefined) {
+            setUser(sessionUser);
+          } else {
+            // Fallback to API call only if session doesn't have permission data
+            const userResponse = await fetch('/api/user/me', {
+              cache: 'no-store',
+              headers: {
+                'Cache-Control': 'no-cache'
+              }
+            });
+            
+            if (userResponse.ok) {
+              const userData = await userResponse.json();
+              setUser(userData.user);
+            } else {
+              setUser(sessionUser);
+            }
+          }
         } else {
           setUser(null);
         }
@@ -54,11 +73,33 @@ export function useUser() {
     isAuthenticated,
     refetch: async () => {
       setLoading(true);
-      const session = await authClient.getSession();
-      if (session.data?.user) {
-        setUser(session.data.user as User);
+      try {
+        // Always fetch fresh data from API when explicitly requested
+        const userResponse = await fetch('/api/user/me', {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache'
+          }
+        });
+        
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          setUser(userData.user);
+        } else {
+          // Fallback to auth client
+          const session = await authClient.getSession();
+          if (session.data?.user) {
+            setUser(session.data.user as User);
+          } else {
+            setUser(null);
+          }
+        }
+      } catch (err) {
+        setError('Failed to refresh user session');
+        console.error('Error refreshing user:', err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
   };
 } 

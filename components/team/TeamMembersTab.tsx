@@ -26,6 +26,7 @@ import {
   Heart
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useUser } from '@/hooks/useUser';
 
 interface TeamMember {
   id: string;
@@ -57,6 +58,7 @@ export function TeamMembersTab({ onStatsUpdate, onInvite }: TeamMembersTabProps)
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const { user, refetch: refetchUser } = useUser();
 
   useEffect(() => {
     fetchTeamMembers();
@@ -96,6 +98,11 @@ export function TeamMembersTab({ onStatsUpdate, onInvite }: TeamMembersTabProps)
           )
         );
         toast.success('Tab permissions updated successfully');
+        
+        // If the current user's permissions were changed, refresh their session
+        if (user?.id === memberId) {
+          await refetchUser();
+        }
       } else {
         toast.error('Failed to update tab permissions');
       }

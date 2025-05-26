@@ -70,7 +70,5 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to fetch dashboard statistics' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 } 

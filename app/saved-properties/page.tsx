@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, Search, Filter, Tag, MapPin, Building, DollarSign, Square, Bed, Bath, Calendar, User, Trash2, Edit, Eye, Grid3X3, List, SortAsc, SortDesc, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,8 @@ export default function SavedPropertiesPage() {
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [showDetailPanel, setShowDetailPanel] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [permissionLoading, setPermissionLoading] = useState(true);
 
   const { 
     savedProperties, 
@@ -32,10 +35,43 @@ export default function SavedPropertiesPage() {
     removeSavedProperty 
   } = useSavedProperties();
 
+  const router = useRouter();
+
+  // Check permission first
+  useEffect(() => {
+    const checkPermission = async () => {
+      try {
+        const response = await fetch('/api/user/check-permission', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ permission: 'canAccessSavedProperties' }),
+        });
+        
+        const data = await response.json();
+        setHasPermission(data.hasPermission);
+        
+        if (!data.hasPermission) {
+          router.push('/dashboard');
+        }
+      } catch (error) {
+        console.error('Error checking permission:', error);
+        router.push('/dashboard');
+      } finally {
+        setPermissionLoading(false);
+      }
+    };
+
+    checkPermission();
+  }, [router]);
+
   // Fetch saved properties on component mount
   useEffect(() => {
-    fetchSavedProperties();
-  }, [fetchSavedProperties]);
+    if (hasPermission) {
+      fetchSavedProperties();
+    }
+  }, [fetchSavedProperties, hasPermission]);
 
   // Filter and sort properties
   const filteredAndSortedProperties = React.useMemo(() => {
@@ -125,6 +161,42 @@ export default function SavedPropertiesPage() {
       yearBuilt: savedProperty.property.yearBuilt || undefined
     };
   };
+
+  // Show loading while checking permissions
+  if (permissionLoading || hasPermission === null) {
+    return (
+      <DashboardLayout>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Show access denied if no permission
+  if (!hasPermission) {
+    return (
+      <DashboardLayout>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Heart className="h-8 w-8 text-red-600" />
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
+            <p className="text-gray-600 mb-6">
+              You don't have permission to access saved properties.
+            </p>
+            <Button onClick={() => router.push('/dashboard')}>
+              Return to Dashboard
+            </Button>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>

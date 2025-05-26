@@ -11,8 +11,9 @@ import { Button } from '@/components/ui/button';
 
 export default function TeamPage() {
   const router = useRouter();
-  const { user, loading, isAdmin } = useUser();
+  const { user, loading } = useUser();
   const [mounted, setMounted] = useState(false);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -24,7 +25,38 @@ export default function TeamPage() {
     }
   }, [user, loading, router]);
 
-  if (!mounted || loading) {
+  // Check backend permission
+  useEffect(() => {
+    const checkPermission = async () => {
+      if (!user) return;
+      
+      try {
+        const response = await fetch('/api/user/check-permission', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ permission: 'canAccessTeamManagement' }),
+        });
+        
+        const data = await response.json();
+        setHasPermission(data.hasPermission);
+        
+        if (!data.hasPermission) {
+          router.push('/dashboard');
+        }
+      } catch (error) {
+        console.error('Error checking permission:', error);
+        router.push('/dashboard');
+      }
+    };
+
+    if (user && mounted) {
+      checkPermission();
+    }
+  }, [user, mounted, router]);
+
+  if (!mounted || loading || hasPermission === null) {
     return (
       <DashboardLayout>
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -37,7 +69,7 @@ export default function TeamPage() {
     );
   }
 
-  if (!isAdmin) {
+  if (!hasPermission) {
     return (
       <DashboardLayout>
         <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
@@ -48,7 +80,7 @@ export default function TeamPage() {
               </div>
               <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
               <p className="text-gray-600 mb-6">
-                You need administrator privileges to access the team management dashboard.
+                You don't have permission to access the team management dashboard.
               </p>
               <Button onClick={() => router.push('/dashboard')} className="w-full">
                 Return to Dashboard

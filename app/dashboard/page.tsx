@@ -25,6 +25,7 @@ export default function DashboardPage() {
   const [statsLoading, setStatsLoading] = useState(true);
   const [selectedProperty, setSelectedProperty] = useState<PropertyLocation | null>(null);
   const [totalPropertiesOnMap, setTotalPropertiesOnMap] = useState(0);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -34,7 +35,25 @@ export default function DashboardPage() {
           router.push("/signin");
           return;
         }
-        // User is authenticated, fetch dashboard stats
+        
+        // Check backend permission
+        const permissionResponse = await fetch('/api/user/check-permission', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ permission: 'canAccessDashboard' }),
+        });
+        
+        const permissionData = await permissionResponse.json();
+        setHasPermission(permissionData.hasPermission);
+        
+        if (!permissionData.hasPermission) {
+          router.push('/saved-properties');
+          return;
+        }
+        
+        // User is authenticated and has permission, fetch dashboard stats
         await fetchDashboardStats();
       } catch (error) {
         console.error("Auth error:", error);
@@ -82,7 +101,7 @@ export default function DashboardPage() {
     console.log("Properties on map:", properties.length);
   };
 
-  if (loading) {
+  if (loading || hasPermission === null) {
     return (
       <DashboardLayout>
         <div className="p-6 space-y-6">
