@@ -1,12 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+interface OwnershipWithOwner {
+  id: string;
+  ownershipType: string;
+  ownershipPercent: number;
+  startDate: Date;
+  owner: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    entityName: string | null;
+    type: string;
+    estimatedNetWorth: number | null;
+    occupation: string | null;
+    employer: string | null;
+    industry: string | null;
+    email: string | null;
+    phone: string | null;
+    mailingAddress: string | null;
+  };
+}
+
+interface TransactionWithParties {
+  id: string;
+  transactionType: string;
+  amount: number;
+  date: Date;
+  documentType: string | null;
+  recordingDate: Date | null;
+  buyer: {
+    firstName: string | null;
+    lastName: string | null;
+    entityName: string | null;
+    type: string;
+  } | null;
+  seller: {
+    firstName: string | null;
+    lastName: string | null;
+    entityName: string | null;
+    type: string;
+  } | null;
+}
+
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const propertyId = params.id;
+    const { id: propertyId } = await params;
 
     // Fetch comprehensive property data
     const property = await prisma.property.findUnique({
@@ -98,7 +140,7 @@ export async function GET(
     }
 
     // Format ownership data
-    const formattedOwnerships = property.ownerships.map((ownership: any) => {
+    const formattedOwnerships = (property.ownerships as OwnershipWithOwner[]).map((ownership) => {
       const owner = ownership.owner;
       let ownerName = 'Unknown Owner';
       
@@ -129,15 +171,15 @@ export async function GET(
     });
 
     // Format transaction data
-    const formattedTransactions = property.transactions.map((transaction: any) => {
-      const getBuyerName = (buyer: any) => {
+    const formattedTransactions = (property.transactions as TransactionWithParties[]).map((transaction) => {
+      const getBuyerName = (buyer: TransactionWithParties['buyer']) => {
         if (!buyer) return 'Unknown';
         return buyer.type === 'individual' 
           ? `${buyer.firstName || ''} ${buyer.lastName || ''}`.trim()
           : buyer.entityName || 'Unknown Entity';
       };
 
-      const getSellerName = (seller: any) => {
+      const getSellerName = (seller: TransactionWithParties['seller']) => {
         if (!seller) return 'Unknown';
         return seller.type === 'individual' 
           ? `${seller.firstName || ''} ${seller.lastName || ''}`.trim()

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { headers } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
@@ -11,7 +10,7 @@ export async function GET(request: NextRequest) {
       session = await auth.api.getSession({
         headers: request.headers
       });
-    } catch (error) {
+    } catch {
       // Session is optional for general stats
       console.log('No session found, showing general stats');
     }

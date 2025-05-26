@@ -285,7 +285,7 @@ export async function GET(request: NextRequest) {
 
     if (dateFilter !== 'all') {
       const now = new Date();
-      let filterDate = new Date();
+      const filterDate = new Date();
       
       switch (dateFilter) {
         case 'today':

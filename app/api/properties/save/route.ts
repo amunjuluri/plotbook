@@ -179,7 +179,12 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: any = {
+    const where: {
+      userId: string;
+      tags?: {
+        has: string;
+      };
+    } = {
       userId: session.user.id
     };
 
@@ -189,33 +194,67 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    // Get saved properties with pagination
-    const [savedProperties, total] = await Promise.all([
-      prisma.savedProperty.findMany({
-        where,
-        include: {
-          property: {
-            include: {
-              state: true,
-              city: true,
-              county: true,
-              ownerships: {
-                where: { isActive: true },
-                include: {
-                  owner: true
+    // Get saved properties with property details
+    const savedProperties = await prisma.savedProperty.findMany({
+      where: where,
+      include: {
+        property: {
+          include: {
+            city: {
+              select: {
+                name: true,
+                state: {
+                  select: {
+                    name: true,
+                    code: true
+                  }
                 }
+              }
+            },
+            state: {
+              select: {
+                name: true,
+                code: true
               }
             }
           }
-        },
-        orderBy: {
-          createdAt: 'desc'
-        },
-        skip,
-        take: limit
-      }),
-      prisma.savedProperty.count({ where })
-    ]);
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      },
+      skip: (page - 1) * limit,
+      take: limit
+    });
+
+    // Transform the data for frontend consumption
+    const transformedProperties = savedProperties.map((saved) => ({
+      id: saved.id,
+      propertyId: saved.propertyId,
+      notes: saved.notes,
+      tags: saved.tags,
+      createdAt: saved.createdAt,
+      property: {
+        id: saved.property.id,
+        address: saved.property.address,
+        latitude: saved.property.latitude,
+        longitude: saved.property.longitude,
+        propertyType: saved.property.propertyType,
+        currentValue: saved.property.currentValue,
+        squareFootage: saved.property.squareFootage,
+        bedrooms: saved.property.bedrooms,
+        bathrooms: saved.property.bathrooms,
+        yearBuilt: saved.property.yearBuilt,
+        city: saved.property.city?.name || 'Unknown',
+        state: saved.property.state?.name || saved.property.city?.state?.name || 'Unknown',
+        stateCode: saved.property.state?.code || saved.property.city?.state?.code || 'XX',
+        formattedValue: saved.property.currentValue 
+          ? (saved.property.currentValue > 1000000 
+            ? `$${(saved.property.currentValue / 1000000).toFixed(1)}M`
+            : `$${saved.property.currentValue.toLocaleString()}`)
+          : 'N/A'
+      }
+    }));
 
     // Get all unique tags for the user
     const allSavedProperties = await prisma.savedProperty.findMany({
@@ -229,39 +268,12 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      savedProperties: savedProperties.map(sp => ({
-        id: sp.id,
-        propertyId: sp.propertyId,
-        notes: sp.notes,
-        tags: sp.tags,
-        createdAt: sp.createdAt,
-        property: {
-          id: sp.property.id,
-          address: sp.property.address,
-          propertyType: sp.property.propertyType,
-          currentValue: sp.property.currentValue,
-          squareFootage: sp.property.squareFootage,
-          bedrooms: sp.property.bedrooms,
-          bathrooms: sp.property.bathrooms,
-          yearBuilt: sp.property.yearBuilt,
-          latitude: sp.property.latitude,
-          longitude: sp.property.longitude,
-          city: sp.property.city?.name,
-          state: sp.property.state.name,
-          stateCode: sp.property.state.code,
-          owners: sp.property.ownerships.map(o => ({
-            name: o.owner.type === 'individual' 
-              ? `${o.owner.firstName || ''} ${o.owner.lastName || ''}`.trim()
-              : o.owner.entityName,
-            ownershipPercent: o.ownershipPercent
-          }))
-        }
-      })),
+      savedProperties: transformedProperties,
       pagination: {
         page,
         limit,
-        total,
-        totalPages: Math.ceil(total / limit)
+        total: savedProperties.length,
+        totalPages: Math.ceil(savedProperties.length / limit)
       },
       availableTags: allTags
     });

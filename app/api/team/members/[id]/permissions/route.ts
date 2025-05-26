@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Check if user is authenticated and is an admin
@@ -21,7 +21,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const memberId = params.id;
+    const { id: memberId } = await params;
 
     // Get the current user's company
     const currentUser = await prisma.user.findUnique({
@@ -44,7 +44,11 @@ export async function PATCH(
     }
 
     // Extract permission fields from body
-    const updateData: any = {};
+    const updateData: {
+      canAccessDashboard?: boolean;
+      canAccessSavedProperties?: boolean;
+      canAccessTeamManagement?: boolean;
+    } = {};
     
     if ('canAccessDashboard' in body) {
       updateData.canAccessDashboard = body.canAccessDashboard;

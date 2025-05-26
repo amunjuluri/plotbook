@@ -1,6 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+interface WhereClause {
+  ownerships?: {
+    some: {
+      owner?: {
+        OR?: Array<{
+          firstName?: { contains: string; mode: 'insensitive' } | { not: null };
+          lastName?: { contains: string; mode: 'insensitive' } | { not: null };
+          entityName?: { contains: string; mode: 'insensitive' } | { not: null };
+        }>;
+      };
+      isActive?: boolean;
+    };
+  };
+  address?: { contains: string; mode: 'insensitive' };
+  state?: { name: string };
+  city?: { name: string };
+  propertyType?: string | { in: string[] };
+  bedrooms?: { gte: number };
+  bathrooms?: { gte: number };
+  squareFootage?: { gte?: number; lte?: number };
+  currentValue?: { gte?: number; lte?: number };
+  yearBuilt?: { gte?: number; lte?: number };
+  OR?: Array<{
+    address?: { contains: string; mode: 'insensitive' };
+    propertyType?: { contains: string; mode: 'insensitive' };
+    city?: { name: { contains: string; mode: 'insensitive' } };
+    state?: { name: { contains: string; mode: 'insensitive' } };
+  }>;
+}
+
+interface OrderByClause {
+  currentValue?: 'asc' | 'desc';
+  squareFootage?: 'asc' | 'desc';
+  yearBuilt?: 'asc' | 'desc';
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -31,7 +67,7 @@ export async function GET(request: NextRequest) {
     const sortOrder = searchParams.get('sortOrder') || 'desc';
 
     // Build where clause based on filters
-    const where: any = {};
+    const where: WhereClause = {};
     
     // Owner search - search by owner names
     if (ownerSearch) {
@@ -128,17 +164,17 @@ export async function GET(request: NextRequest) {
     }
 
     // Build orderBy clause based on sortBy parameter
-    let orderBy: any = { currentValue: 'desc' }; // Default sorting
+    let orderBy: OrderByClause = { currentValue: 'desc' }; // Default sorting
     
     switch (sortBy) {
       case 'price':
-        orderBy = { currentValue: sortOrder };
+        orderBy = { currentValue: sortOrder as 'asc' | 'desc' };
         break;
       case 'size':
-        orderBy = { squareFootage: sortOrder };
+        orderBy = { squareFootage: sortOrder as 'asc' | 'desc' };
         break;
       case 'year':
-        orderBy = { yearBuilt: sortOrder };
+        orderBy = { yearBuilt: sortOrder as 'asc' | 'desc' };
         break;
       case 'relevance':
       default:

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,7 +27,7 @@ interface PropertyData {
   yearBuilt: string;
 }
 
-export default function PropertyPage() {
+function PropertyPageContent() {
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [propertyData, setPropertyData] = useState<PropertyData | null>(null);
@@ -260,5 +260,54 @@ export default function PropertyPage() {
         </div>
       </div>
     </DashboardLayout>
+  );
+}
+
+export default function PropertyPage() {
+  return (
+    <Suspense fallback={
+      <DashboardLayout>
+        <div className="flex items-center mb-6">
+          <Button variant="ghost" size="icon" asChild className="mr-2">
+            <Link href="/dashboard">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
+          <Skeleton className="h-8 w-64" />
+        </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-32 mb-2" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-[300px] w-full mb-4" />
+              <div className="space-y-3">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            </CardContent>
+          </Card>
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <Skeleton className="h-6 w-32 mb-2" />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-4 w-5/6" />
+                  <Skeleton className="h-4 w-2/3" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </DashboardLayout>
+    }>
+      <PropertyPageContent />
+    </Suspense>
   );
 } 
