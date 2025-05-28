@@ -5,6 +5,7 @@ import type { Metadata } from 'next'
 import { Inter, Montserrat } from 'next/font/google'
 import localFont from 'next/font/local'
 import { Toaster } from 'sonner';
+import { Analytics } from "@vercel/analytics/next"
 
 
 const CalSans = localFont({
@@ -36,6 +37,7 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${CalSans.variable} ${montserrat.variable}`}>
       <body className="antialiased font-montserrat">
         {children}
+        <Analytics />
         <Toaster position="top-right" richColors closeButton />
       </body>
     </html>
