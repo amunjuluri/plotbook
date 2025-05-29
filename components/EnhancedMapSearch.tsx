@@ -188,7 +188,11 @@ export function EnhancedMapSearch({
       map.current = mapInstance;
       
       // Add controls
-      mapInstance.addControl(new mapboxgl.NavigationControl());
+      mapInstance.addControl(new mapboxgl.NavigationControl({
+        showCompass: true,
+        showZoom: false,
+        visualizePitch: true
+      }), 'top-right');
       
       // Handle map loading
       mapInstance.on('style.load', () => {
@@ -791,6 +795,7 @@ export function EnhancedMapSearch({
     
     // Remove existing marker if it exists
     if (markers.current[property.id]) {
+      console.log(`Removing existing marker for ${property.address}`);
       markers.current[property.id].remove();
       delete markers.current[property.id];
     }
@@ -876,7 +881,7 @@ export function EnhancedMapSearch({
       }
       
       markers.current[property.id] = marker;
-      console.log(`Added ${property.propertyType} marker for: ${property.address} at [${property.longitude}, ${property.latitude}]`);
+      console.log(`Successfully added ${property.propertyType} marker for: ${property.address} (Total markers: ${Object.keys(markers.current).length})`);
     };
 
     if (map.current.isStyleLoaded()) {
@@ -888,9 +893,9 @@ export function EnhancedMapSearch({
 
   // Re-add all markers when map style loads
   const reAddAllMarkers = () => {
-    if (!map.current || !map.current.isStyleLoaded()) return;
+    if (!map.current) return;
     
-    // Clear existing markers
+    // Clear existing markers first
     Object.values(markers.current).forEach(marker => {
       if ((marker as any)._cleanup) {
         (marker as any)._cleanup();
@@ -899,10 +904,20 @@ export function EnhancedMapSearch({
     });
     markers.current = {};
     
-    // Re-add all properties
-    properties.forEach(property => {
-      addPropertyMarker(property);
-    });
+    // Re-add all properties - wait for style to be loaded
+    const addMarkers = () => {
+      if (map.current && map.current.isStyleLoaded() && properties.length > 0) {
+        properties.forEach(property => {
+          addPropertyMarker(property);
+        });
+      }
+    };
+
+    if (map.current.isStyleLoaded()) {
+      addMarkers();
+    } else {
+      map.current.once('style.load', addMarkers);
+    }
   };
 
   // Remove property
@@ -978,22 +993,34 @@ export function EnhancedMapSearch({
   useEffect(() => {
     if (!map.current) return;
 
-    if (!map.current.isStyleLoaded()) {
-      const onStyleLoad = () => {
-        properties.forEach(property => {
-          addPropertyMarker(property);
-        });
-        map.current?.off('style.load', onStyleLoad);
-      };
-      map.current.on('style.load', onStyleLoad);
-      return;
-    }
+    // Function to add missing markers
+    const ensureMarkersExist = () => {
+      if (!map.current?.isStyleLoaded()) return;
 
-    properties.forEach(property => {
-      if (!markers.current[property.id]) {
-        addPropertyMarker(property);
-      }
-    });
+      properties.forEach(property => {
+        if (!markers.current[property.id]) {
+          addPropertyMarker(property);
+        }
+      });
+
+      // Remove markers for properties that no longer exist
+      Object.keys(markers.current).forEach(markerId => {
+        if (!properties.find(p => p.id === markerId)) {
+          const marker = markers.current[markerId];
+          if ((marker as any)._cleanup) {
+            (marker as any)._cleanup();
+          }
+          marker.remove();
+          delete markers.current[markerId];
+        }
+      });
+    };
+
+    if (map.current.isStyleLoaded()) {
+      ensureMarkersExist();
+    } else {
+      map.current.once('style.load', ensureMarkersExist);
+    }
   }, [properties]);
 
   // Toggle map style
@@ -1002,6 +1029,9 @@ export function EnhancedMapSearch({
     
     const currentCenter = map.current.getCenter();
     const currentZoom = map.current.getZoom();
+    const propertiesCount = properties.length;
+    
+    console.log(`Toggling map style from ${mapStyle}. Properties: ${propertiesCount}, Current markers: ${Object.keys(markers.current).length}`);
     
     const newStyle = mapStyle === 'satellite' ? 'mapbox://styles/mapbox/standard' : 'mapbox://styles/mapbox/standard-satellite';
     setMapStyle(mapStyle === 'satellite' ? 'standard' : 'satellite');
@@ -1014,19 +1044,28 @@ export function EnhancedMapSearch({
       marker.remove();
     });
     markers.current = {};
+    console.log('Cleared all markers before style change');
     
     map.current.setStyle(newStyle);
     
     map.current.once('style.load', () => {
+      console.log('Map style loaded, jumping to center and re-adding markers');
       map.current?.jumpTo({
         center: currentCenter,
         zoom: currentZoom
       });
       
-      // Use the reAddAllMarkers function for consistency
+      // Re-add markers directly after style loads
       setTimeout(() => {
-        reAddAllMarkers();
-      }, 200);
+        if (map.current && map.current.isStyleLoaded()) {
+          console.log(`Re-adding ${propertiesCount} markers after style change`);
+          properties.forEach(property => {
+            addPropertyMarker(property);
+          });
+        } else {
+          console.warn('Map style not loaded yet, cannot re-add markers');
+        }
+      }, 300);
     });
   };
 
@@ -2272,7 +2311,41 @@ export function EnhancedMapSearch({
 
       {/* Map style toggle button - Only visible in map view */}
       {viewMode === 'map' && (
-        <div className="absolute bottom-4 right-4 z-[85]">
+        <div className="absolute bottom-4 right-4 z-[85] flex flex-col gap-2">
+          {/* Custom Zoom Controls */}
+          <div className="flex flex-col bg-white/95 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200 overflow-hidden">
+            <motion.button
+              onClick={() => map.current?.zoomIn()}
+              className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-gray-700 hover:bg-gray-50 border-b border-gray-200 transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              title="Zoom In"
+            >
+              <span className="text-lg font-semibold">+</span>
+            </motion.button>
+            <motion.button
+              onClick={() => map.current?.zoomOut()}
+              className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-gray-700 hover:bg-gray-50 border-b border-gray-200 transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              title="Zoom Out"
+            >
+              <span className="text-lg font-semibold">−</span>
+            </motion.button>
+            {properties.length > 1 && (
+              <motion.button
+                onClick={fitMapToProperties}
+                className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-gray-700 hover:bg-gray-50 transition-colors"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title="Fit to View All Pins"
+              >
+                <Target className="h-4 w-4" />
+              </motion.button>
+            )}
+          </div>
+          
+          {/* Map Style Toggle */}
           <motion.div
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -2299,7 +2372,7 @@ export function EnhancedMapSearch({
       <AnimatePresence>
         {allowMultiple && properties.length > 0 && (
           <motion.div 
-            className={`absolute bottom-4 z-[90] ${viewMode === 'map' ? 'right-16 sm:right-20' : 'right-4'}`}
+            className={`absolute bottom-4 z-[90] ${viewMode === 'map' ? 'right-20 sm:right-24' : 'right-4'}`}
             initial={{ opacity: 0, scale: 0.8, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.8, y: 20 }}
@@ -2503,7 +2576,7 @@ export function EnhancedMapSearch({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="absolute inset-0 pt-32 sm:pt-40"
+            className="absolute inset-0 pt-28 sm:pt-36 pb-4"
           >
             {mapError ? (
               <motion.div 
@@ -2517,7 +2590,8 @@ export function EnhancedMapSearch({
             ) : (
               <div 
                 ref={mapContainer}
-                className="w-full h-full"
+                className="w-full h-full rounded-lg overflow-hidden shadow-lg border border-gray-200"
+                style={{ minHeight: '400px' }}
               />
             )}
           </motion.div>
@@ -2708,7 +2782,7 @@ export function EnhancedMapSearch({
       <AnimatePresence>
         {selectedProperty && viewMode === 'map' && (
           <motion.div 
-            className="absolute bottom-4 left-4 right-20 sm:right-auto bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg max-w-sm z-[80] border border-gray-200"
+            className="absolute bottom-4 left-4 right-28 sm:right-32 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg max-w-sm z-[80] border border-gray-200"
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
