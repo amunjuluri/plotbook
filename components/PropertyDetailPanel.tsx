@@ -19,7 +19,8 @@ import {
  
   Copy,
   CheckCircle,
-
+  TrendingUp,
+  DollarSign
 } from "lucide-react";
 import { 
   calculatePropertyValuation, 
@@ -555,9 +556,33 @@ export function PropertyDetailPanel({ propertyId, onClose, isOpen }: PropertyDet
                                 </div>
 
                                 <div className="mt-4 pt-3 border-t border-gray-100">
-                                  <p className="text-xs text-gray-500">
-                                    Owner since {formatDate(ownership.startDate)}
-                                  </p>
+                                  <div className="flex items-center justify-between gap-3">
+                                    <p className="text-xs text-gray-500 flex-shrink-0">
+                                      Owner since {formatDate(ownership.startDate)}
+                                    </p>
+                                    {/* Enhanced Wealth Analysis Button */}
+                                    <motion.div
+                                      whileHover={{ scale: 1.02 }}
+                                      whileTap={{ scale: 0.98 }}
+                                    >
+                                      <Button
+                                        onClick={() => {
+                                          const params = new URLSearchParams({
+                                            ownerId: ownership.owner.id,
+                                            propertyId: property.id
+                                          });
+                                          window.open(`/dashboard/wealth-analysis?${params.toString()}`, '_blank');
+                                        }}
+                                        size="sm"
+                                        variant="outline"
+                                        className="text-xs sm:text-sm bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200 hover:from-purple-100 hover:to-blue-100 hover:border-purple-300 text-purple-700 hover:text-purple-800 transition-all duration-200 shadow-sm hover:shadow-md whitespace-nowrap"
+                                      >
+                                        <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                        <span className="hidden sm:inline">Wealth Analysis</span>
+                                        <span className="sm:hidden">Analysis</span>
+                                      </Button>
+                                    </motion.div>
+                                  </div>
                                 </div>
                               </div>
                             ))}

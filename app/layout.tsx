@@ -6,21 +6,24 @@ import { Inter, Montserrat } from 'next/font/google'
 import localFont from 'next/font/local'
 import { Toaster } from 'sonner';
 import { Analytics } from "@vercel/analytics/next"
-
+import { cn } from '@/lib/utils'
 
 const CalSans = localFont({
   src: './fonts/CalSans-Regular.ttf',
-  variable: '--font-cal-sans'
+  variable: '--font-cal-sans',
+  display: 'swap'
 })
 
 const montserrat = Montserrat({ 
   subsets: ['latin'],
-  variable: '--font-montserrat'
+  variable: '--font-montserrat',
+  display: 'swap'
 })
 
 const inter = Inter({ 
   subsets: ['latin'],
-  variable: '--font-inter'
+  variable: '--font-inter',
+  display: 'swap'
 })
 
 export const metadata: Metadata = {
@@ -33,9 +36,15 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  const fontClasses = cn(
+    inter.variable,
+    CalSans.variable,
+    montserrat.variable
+  )
+
   return (
-    <html lang="en" className={`${inter.variable} ${CalSans.variable} ${montserrat.variable}`}>
-      <body className="antialiased font-montserrat">
+    <html lang="en" className={fontClasses} suppressHydrationWarning>
+      <body className="antialiased font-montserrat" suppressHydrationWarning>
         {children}
         <Analytics />
         <Toaster position="top-right" richColors closeButton />
