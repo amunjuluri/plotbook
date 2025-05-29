@@ -206,6 +206,9 @@ export function EnhancedMapSearch({
           'space-color': '#d8f2ff',
           'star-intensity': 0.0
         });
+
+        // Re-add all existing markers after style loads
+        reAddAllMarkers();
       });
       
       // Handle map errors
@@ -251,7 +254,7 @@ export function EnhancedMapSearch({
         map.current = null;
       }
     };
-  }, [viewMode]);
+  }, [viewMode, mapStyle]); // Add mapStyle dependency
 
   // Re-add markers when switching back to map view
   useEffect(() => {
@@ -418,17 +421,92 @@ export function EnhancedMapSearch({
   const handleAddressSearch = async () => {
     try {
       if (searchQuery.trim()) {
-        // Enhanced US-only geocoding with additional parameters
+        // First, search for properties in database that match the address
+        const params = buildSearchParams();
+        params.append('address', searchQuery);
+        
+        const response = await fetch(`/api/properties/locations?${params.toString()}`);
+        if (response.ok) {
+          const data = await response.json();
+          const rawResults = data.properties || [];
+          
+          if (rawResults.length > 0) {
+            // Found properties in database - format them properly
+            const databaseResults = rawResults.map((property: any) => {
+              const getPropertyColor = (type: string) => {
+                switch (type.toLowerCase()) {
+                  case 'residential': return '#10b981';
+                  case 'commercial': return '#3b82f6';
+                  case 'industrial': return '#f59e0b';
+                  case 'land': return '#8b5cf6';
+                  default: return '#6b7280';
+                }
+              };
+
+              return {
+                ...property,
+                id: property.id || generatePropertyId(),
+                color: getPropertyColor(property.propertyType),
+                title: `${property.address}, ${property.city}, ${property.stateCode}`,
+                description: `${property.propertyType} • ${property.formattedValue} • ${property.squareFootage?.toLocaleString() || 'N/A'} sq ft${property.bedrooms ? ` • ${property.bedrooms}bd` : ''}${property.bathrooms ? `/${property.bathrooms}ba` : ''}`
+              };
+            });
+            
+            setSearchResults(databaseResults);
+            setShowResults(true);
+            return; // Exit early since we found properties
+          } else {
+            // If no direct address matches, try searching for properties in the city/area
+            console.log('No direct address matches, trying broader area search...');
+            const areaParams = buildSearchParams();
+            areaParams.append('search', searchQuery); // Use general search which searches multiple fields
+            
+            const areaResponse = await fetch(`/api/properties/locations?${areaParams.toString()}`);
+            if (areaResponse.ok) {
+              const areaData = await areaResponse.json();
+              const areaResults = areaData.properties || [];
+              
+              if (areaResults.length > 0) {
+                const areaFormattedResults = areaResults.map((property: any) => {
+                  const getPropertyColor = (type: string) => {
+                    switch (type.toLowerCase()) {
+                      case 'residential': return '#10b981';
+                      case 'commercial': return '#3b82f6';
+                      case 'industrial': return '#f59e0b';
+                      case 'land': return '#8b5cf6';
+                      default: return '#6b7280';
+                    }
+                  };
+
+                  return {
+                    ...property,
+                    id: property.id || generatePropertyId(),
+                    color: getPropertyColor(property.propertyType),
+                    title: `${property.address}, ${property.city}, ${property.stateCode}`,
+                    description: `${property.propertyType} • ${property.formattedValue} • In ${property.city} area`
+                  };
+                });
+                
+                setSearchResults(areaFormattedResults);
+                setShowResults(true);
+                return; // Exit early since we found area properties
+              }
+            }
+          }
+        }
+        
+        // No properties found in database, fallback to geocoding for location pins
+        console.log('No properties found in database for address, falling back to geocoding...');
         const searchUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(searchQuery)}.json?access_token=${mapboxgl.accessToken}&limit=5&country=US&types=address,place,region,postcode&autocomplete=true`;
         
-        const response = await fetch(searchUrl);
-        if (!response.ok) throw new Error('Geocoding failed');
+        const geocodingResponse = await fetch(searchUrl);
+        if (!geocodingResponse.ok) throw new Error('Geocoding failed');
         
-        const data = await response.json();
+        const geocodingData = await geocodingResponse.json();
         
-        if (data.features && data.features.length > 0) {
+        if (geocodingData.features && geocodingData.features.length > 0) {
           // Convert geocoding results to our property format
-          const geocodingResults = data.features.map((feature: any) => ({
+          const geocodingResults = geocodingData.features.map((feature: any) => ({
             id: generatePropertyId(),
             latitude: feature.center[1],
             longitude: feature.center[0],
@@ -440,7 +518,7 @@ export function EnhancedMapSearch({
             state: feature.context?.find((c: any) => c.id.includes('region'))?.text || 'Unknown',
             stateCode: feature.context?.find((c: any) => c.id.includes('region'))?.short_code?.replace('US-', '') || 'XX',
             title: feature.place_name,
-            description: 'Geocoded location',
+            description: 'Geocoded location - No properties found at this address',
             color: '#D2966E'
           }));
           
@@ -709,86 +787,122 @@ export function EnhancedMapSearch({
 
   // Add property marker
   const addPropertyMarker = (property: PropertyLocation) => {
+    if (!map.current) return;
+    
+    // Remove existing marker if it exists
+    if (markers.current[property.id]) {
+      markers.current[property.id].remove();
+      delete markers.current[property.id];
+    }
+    
+    // Wait for map to be loaded before adding marker
+    const addMarker = () => {
+      const getPropertyColor = (type: string) => {
+        switch (type.toLowerCase()) {
+          case 'residential': return '#10b981';
+          case 'commercial': return '#3b82f6';
+          case 'industrial': return '#f59e0b';
+          case 'land': return '#8b5cf6';
+          case 'location': return '#D2966E';
+          default: return '#6b7280';
+        }
+      };
+      
+      const markerColor = property.color || getPropertyColor(property.propertyType);
+      
+      const marker = new mapboxgl.Marker({
+        color: markerColor,
+        scale: 0.8
+      })
+        .setLngLat([property.longitude, property.latitude])
+        .addTo(map.current!);
+      
+      // Create popup content based on property type
+      let popupContent = '';
+      if (property.propertyType === 'location') {
+        popupContent = `
+          <div class="p-3 min-w-[200px]">
+            <div class="font-semibold text-sm text-gray-900 mb-1">${property.address}</div>
+            <div class="text-xs text-gray-600 mb-2">${property.city}, ${property.stateCode}</div>
+            <span class="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-medium">Location Pin</span>
+          </div>
+        `;
+      } else {
+        popupContent = `
+          <div class="p-3 min-w-[200px]">
+            <div class="font-semibold text-sm text-gray-900 mb-1">${property.address}</div>
+            <div class="text-xs text-gray-600 mb-2">${property.city}, ${property.stateCode}</div>
+            <div class="flex items-center gap-2 flex-wrap mb-2">
+              <span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">${property.formattedValue}</span>
+              <span class="text-xs text-gray-500 capitalize bg-gray-100 px-2 py-1 rounded-full">${property.propertyType}</span>
+            </div>
+            ${property.squareFootage || property.bedrooms || property.bathrooms ? `
+              <div class="text-xs text-gray-600 flex items-center gap-3">
+                ${property.squareFootage ? `<span>${property.squareFootage.toLocaleString()} sq ft</span>` : ''}
+                ${property.bedrooms ? `<span>${property.bedrooms}bd</span>` : ''}
+                ${property.bathrooms ? `<span>${property.bathrooms}ba</span>` : ''}
+              </div>
+            ` : ''}
+            ${property.ownerName ? `
+              <div class="text-xs text-gray-500 mt-1">Owner: ${property.ownerName}</div>
+            ` : ''}
+          </div>
+        `;
+      }
+      
+      const popup = new mapboxgl.Popup({
+        offset: 25,
+        closeButton: false,
+        closeOnClick: false,
+        className: 'property-popup'
+      }).setHTML(popupContent);
+      
+      marker.setPopup(popup);
+      
+      // Add click handler for non-location properties
+      if (property.propertyType !== 'location') {
+        const clickHandler = (e: Event) => {
+          e.stopPropagation();
+          openPropertyDetail(property.id);
+        };
+        
+        marker.getElement().addEventListener('click', clickHandler);
+        marker.getElement().style.cursor = 'pointer';
+        
+        // Store cleanup function
+        (marker as any)._cleanup = () => {
+          marker.getElement().removeEventListener('click', clickHandler);
+        };
+      }
+      
+      markers.current[property.id] = marker;
+      console.log(`Added ${property.propertyType} marker for: ${property.address} at [${property.longitude}, ${property.latitude}]`);
+    };
+
+    if (map.current.isStyleLoaded()) {
+      addMarker();
+    } else {
+      map.current.once('style.load', addMarker);
+    }
+  };
+
+  // Re-add all markers when map style loads
+  const reAddAllMarkers = () => {
     if (!map.current || !map.current.isStyleLoaded()) return;
     
-    if (markers.current[property.id]) {
-      return;
-    }
-    
-    const getPropertyColor = (type: string) => {
-      switch (type.toLowerCase()) {
-        case 'residential': return '#10b981';
-        case 'commercial': return '#3b82f6';
-        case 'industrial': return '#f59e0b';
-        case 'land': return '#8b5cf6';
-        case 'location': return '#D2966E';
-        default: return '#6b7280';
+    // Clear existing markers
+    Object.values(markers.current).forEach(marker => {
+      if ((marker as any)._cleanup) {
+        (marker as any)._cleanup();
       }
-    };
+      marker.remove();
+    });
+    markers.current = {};
     
-    const markerColor = property.color || getPropertyColor(property.propertyType);
-    
-    const marker = new mapboxgl.Marker({
-      color: markerColor,
-      scale: 0.8
-    })
-      .setLngLat([property.longitude, property.latitude])
-      .addTo(map.current);
-    
-    // Create popup content based on property type
-    let popupContent = '';
-    if (property.propertyType === 'location') {
-      popupContent = `
-        <div class="p-3 min-w-[200px]">
-          <div class="font-semibold text-sm text-gray-900 mb-1">${property.address}</div>
-          <div class="text-xs text-gray-600 mb-2">${property.city}, ${property.stateCode}</div>
-          <span class="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-medium">Location Pin</span>
-        </div>
-      `;
-    } else {
-      popupContent = `
-        <div class="p-3 min-w-[200px]">
-          <div class="font-semibold text-sm text-gray-900 mb-1">${property.address}</div>
-          <div class="text-xs text-gray-600 mb-2">${property.city}, ${property.stateCode}</div>
-          <div class="flex items-center gap-2 flex-wrap mb-2">
-            <span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">${property.formattedValue}</span>
-            <span class="text-xs text-gray-500 capitalize bg-gray-100 px-2 py-1 rounded-full">${property.propertyType}</span>
-          </div>
-          ${property.squareFootage || property.bedrooms || property.bathrooms ? `
-            <div class="text-xs text-gray-600 flex items-center gap-3">
-              ${property.squareFootage ? `<span>${property.squareFootage.toLocaleString()} sq ft</span>` : ''}
-              ${property.bedrooms ? `<span>${property.bedrooms}bd</span>` : ''}
-              ${property.bathrooms ? `<span>${property.bathrooms}ba</span>` : ''}
-            </div>
-          ` : ''}
-          ${property.ownerName ? `
-            <div class="text-xs text-gray-500 mt-1">Owner: ${property.ownerName}</div>
-          ` : ''}
-        </div>
-      `;
-    }
-    
-    const popup = new mapboxgl.Popup({
-      offset: 25,
-      closeButton: false,
-      closeOnClick: false,
-      className: 'property-popup'
-    }).setHTML(popupContent);
-    
-    marker.setPopup(popup);
-    
-    if (property.propertyType !== 'location') {
-      marker.getElement().addEventListener('click', (e) => {
-        e.stopPropagation();
-        openPropertyDetail(property.id);
-      });
-      
-      marker.getElement().style.cursor = 'pointer';
-    }
-    
-    markers.current[property.id] = marker;
-    
-    console.log(`Added ${property.propertyType} marker for: ${property.address} at [${property.longitude}, ${property.latitude}]`);
+    // Re-add all properties
+    properties.forEach(property => {
+      addPropertyMarker(property);
+    });
   };
 
   // Remove property
@@ -892,6 +1006,7 @@ export function EnhancedMapSearch({
     const newStyle = mapStyle === 'satellite' ? 'mapbox://styles/mapbox/standard' : 'mapbox://styles/mapbox/standard-satellite';
     setMapStyle(mapStyle === 'satellite' ? 'standard' : 'satellite');
     
+    // Clear existing markers before style change
     Object.values(markers.current).forEach(marker => {
       if ((marker as any)._cleanup) {
         (marker as any)._cleanup();
@@ -908,10 +1023,9 @@ export function EnhancedMapSearch({
         zoom: currentZoom
       });
       
+      // Use the reAddAllMarkers function for consistency
       setTimeout(() => {
-        properties.forEach(property => {
-          addPropertyMarker(property);
-        });
+        reAddAllMarkers();
       }, 200);
     });
   };
